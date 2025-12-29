@@ -2,290 +2,729 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>MCP History Explorer</title>
+  <title>Sutra</title>
 
   <style>
-    body {
-      font-family: sans-serif;
-      width: 400px;
-      padding: 10px;
-    }
-
-    h3 {
-      margin-top: 0;
-    }
-
-    label {
-      font-size: 12px;
-      font-weight: bold;
-      display: block;
-      margin-top: 10px;
-    }
-
-    .required {
-      color: #d32f2f;
-    }
-
-    .optional {
-      color: #666;
-      font-weight: normal;
-    }
-
-    select, input, textarea, button {
-      width: 100%;
-      margin-top: 4px;
-      padding: 6px;
+    * {
+      margin: 0;
+      padding: 0;
       box-sizing: border-box;
     }
 
-    textarea {
-      height: 80px;
-      font-family: monospace;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      width: 500px;
+      max-height: 700px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      overflow-x: hidden;
+      margin: 0;
     }
 
-    button {
-      margin-top: 12px;
-      cursor: pointer;
+    .container {
+      background: white;
+      min-height: 100%;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
+    .header {
+      text-align: center;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #f0f0f0;
     }
 
-    pre {
-      margin-top: 10px;
-      background: #f4f4f4;
-      padding: 8px;
-      max-height: 250px;
-      overflow: auto;
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    .header p {
       font-size: 12px;
-    }
-
-    .section {
-      border-top: 1px solid #ddd;
-      margin-top: 10px;
-      padding-top: 10px;
-      display: none;
-    }
-
-    .section.visible {
-      display: block;
+      color: #666;
     }
 
     .mode-container {
       display: flex;
       align-items: center;
-      gap: 15px;
-      margin-bottom: 15px;
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
+      gap: 12px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
     }
 
     .mode-label {
-      font-size: 12px;
-      font-weight: bold;
-      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #495057;
     }
 
     .radio-group {
       display: flex;
-      gap: 15px;
+      gap: 16px;
       align-items: center;
     }
 
     .radio-option {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .radio-option:hover {
+      background: rgba(102, 126, 234, 0.1);
     }
 
     .radio-option input[type="radio"] {
       margin: 0;
       cursor: pointer;
+      accent-color: #667eea;
     }
 
     .radio-option label {
-      font-size: 12px;
-      font-weight: normal;
+      font-size: 13px;
+      font-weight: 500;
       margin: 0;
       cursor: pointer;
+      color: #495057;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #495057;
+      display: block;
+    }
+
+    .required {
+      color: #dc3545;
+    }
+
+    .optional {
+      color: #6c757d;
+      font-weight: 400;
+      font-size: 11px;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      appearance: none;
+    }
+
+    .section {
+      display: none;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    .section.visible {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+      margin-top: 8px;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #output {
+      margin-top: 16px;
+      padding: 0;
+      background: transparent;
+      max-height: 400px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: #667eea;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Result Cards */
+    .result-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e9ecef;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-header {
+      font-size: 16px;
+      font-weight: 700;
+      color: #212529;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-content {
+      font-size: 14px;
+      color: #495057;
+    }
+
+    /* List items */
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      transition: all 0.2s;
+    }
+
+    .list-item:hover {
+      background: #e9ecef;
+      transform: translateX(4px);
+    }
+
+    .list-item-rank {
+      font-weight: 700;
+      color: #667eea;
+      font-size: 16px;
+      min-width: 24px;
+    }
+
+    .list-item-content {
+      flex: 1;
+      margin-left: 12px;
+    }
+
+    .list-item-title {
+      font-weight: 600;
+      color: #212529;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+
+    .list-item-subtitle {
+      font-size: 12px;
+      color: #6c757d;
+    }
+
+    .list-item-value {
+      font-weight: 700;
+      color: #495057;
+      font-size: 16px;
+    }
+
+    /* Bar Chart */
+    .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bar-label {
+      min-width: 120px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #495057;
+      word-break: break-word;
+    }
+
+    .bar-container {
+      flex: 1;
+      height: 24px;
+      background: #e9ecef;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      transition: width 0.5s ease-out;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .bar-value {
+      min-width: 50px;
+      text-align: right;
+      font-weight: 600;
+      color: #495057;
+      font-size: 13px;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* Category badges */
+    .category-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin: 4px 4px 4px 0;
+    }
+
+    .category-social { background: #ffe0e6; color: #c2185b; }
+    .category-productivity { background: #e3f2fd; color: #1976d2; }
+    .category-news { background: #fff3e0; color: #f57c00; }
+    .category-shopping { background: #f3e5f5; color: #7b1fa2; }
+    .category-entertainment { background: #e8f5e9; color: #388e3c; }
+    .category-education { background: #fff9c4; color: #f9a825; }
+    .category-other { background: #eceff1; color: #546e7a; }
+
+    /* Time slots */
+    .time-slot {
+      margin-bottom: 16px;
+    }
+
+    .time-slot-header {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    /* Session cards */
+    .session-card {
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .session-time {
+      font-size: 12px;
+      color: #6c757d;
+      margin-bottom: 8px;
+    }
+
+    .session-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+    }
+
+    .session-stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Navigation paths */
+    .path-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .path-arrow {
+      color: #667eea;
+      font-weight: 700;
+    }
+
+    /* Error message */
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid #c33;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #6c757d;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    /* Scrollbar styling */
+    #output::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #output::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    #output::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 4px;
+    }
+
+    #output::-webkit-scrollbar-thumb:hover {
+      background: #764ba2;
     }
   </style>
 </head>
 
 <body>
-  <h3>MCP History Explorer</h3>
+  <div class="container">
+    <div class="header">
+      <h1>Sutra: Smart History Explorer</h1>
+      <p>Analyze your browsing patterns with beautiful visualizations</p>
+    </div>
 
-  <div class="mode-container">
-    <span class="mode-label">Mode:</span>
-    <div class="radio-group">
-      <div class="radio-option">
-        <input type="radio" id="modeLocal" name="mode" value="local" checked />
-        <label for="modeLocal">Local</label>
-      </div>
-      <div class="radio-option">
-        <input type="radio" id="modeMCP" name="mode" value="mcp" />
-        <label for="modeMCP">MCP</label>
+    <div class="mode-container">
+      <span class="mode-label">Mode:</span>
+      <div class="radio-group">
+        <div class="radio-option">
+          <input type="radio" id="modeLocal" name="mode" value="local" checked />
+          <label for="modeLocal">Local</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="modeMCP" name="mode" value="mcp" />
+          <label for="modeMCP">MCP</label>
+        </div>
       </div>
     </div>
+
+    <div class="form-group">
+      <label>Operation</label>
+      <select id="operation">
+        <option value="">Select an operation...</option>
+        <optgroup label="Top & Frequency">
+          <option value="top_links">Top visited links</option>
+          <option value="top_domains">Top domains</option>
+          <option value="top_domains_by_day">Top domains by day</option>
+          <option value="domain_frequency">Domain frequency</option>
+        </optgroup>
+        <optgroup label="Time Analysis">
+          <option value="visits_by_time_of_day">Visits by time of day</option>
+          <option value="domain_time_distribution">Domain time distribution</option>
+          <option value="browser_usage_timeline">Browser usage timeline</option>
+        </optgroup>
+        <optgroup label="Navigation & Patterns">
+          <option value="sessions">Sessions</option>
+          <option value="before_after_navigation">Before/after navigation</option>
+          <option value="navigation_paths">Most common navigation paths</option>
+          <option value="repeated_patterns">Repeated patterns</option>
+          <option value="neighbor_visits">Neighbor visits</option>
+        </optgroup>
+        <optgroup label="Summary & Trends">
+          <option value="daily_summary">Daily browsing summary</option>
+          <option value="new_vs_familiar">New vs familiar sites</option>
+          <option value="repeated_daily_habits">Repeated daily habits</option>
+          <option value="emerging_interests">Emerging interests</option>
+        </optgroup>
+        <optgroup label="Categories & Productivity">
+          <option value="category_tagging">Category tagging</option>
+          <option value="category_inference">Category inference</option>
+          <option value="productivity_vs_distraction">Productivity vs distraction</option>
+        </optgroup>
+        <optgroup label="Search & Export">
+          <option value="history_search">History search</option>
+          <option value="export_data">Export data</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="section" data-operation="top_links">
+      <div class="form-group">
+        <label>Limit <span class="optional">(optional, default: 10)</span></label>
+        <input id="limit" type="number" value="10" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="top_domains">
+      <div class="form-group">
+        <label>Limit <span class="optional">(optional, default: 10)</span></label>
+        <input id="limit" type="number" value="10" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="top_domains_by_day">
+      <div class="form-group">
+        <label>Date <span class="required">*</span></label>
+        <input id="date" type="date" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="visits_by_time_of_day">
+      <div class="form-group">
+        <label style="color: #6c757d;">No parameters needed</label>
+      </div>
+    </div>
+
+    <div class="section" data-operation="sessions">
+      <div class="form-group">
+        <label>Session gap (minutes) <span class="optional">(optional, default: 30)</span></label>
+        <input id="session_gap" type="number" value="30" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="before_after_navigation">
+      <div class="form-group">
+        <label>Anchor domain <span class="required">*</span></label>
+        <input id="anchor_domain" type="text" placeholder="youtube.com" />
+      </div>
+      <div class="form-group">
+        <label>Direction <span class="optional">(optional, default: after)</span></label>
+        <select id="direction">
+          <option value="after">After</option>
+          <option value="before">Before</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section" data-operation="daily_summary">
+      <div class="form-group">
+        <label>Days <span class="optional">(optional, default: 1)</span></label>
+        <input id="days" type="number" value="1" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="new_vs_familiar">
+      <div class="form-group">
+        <label>Days <span class="optional">(optional, default: 7)</span></label>
+        <input id="days" type="number" value="7" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="category_tagging">
+      <div class="form-group">
+        <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
+        <input id="date" type="date" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="history_search">
+      <div class="form-group">
+        <label>Search query <span class="required">*</span></label>
+        <input id="search_query" type="text" placeholder="python" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="export_data">
+      <div class="form-group">
+        <label>Format <span class="optional">(optional, default: json)</span></label>
+        <select id="export_format">
+          <option value="json">JSON</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section" data-operation="navigation_paths">
+      <div class="form-group">
+        <label>Limit <span class="optional">(optional, default: 10)</span></label>
+        <input id="limit" type="number" value="10" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="repeated_patterns">
+      <div class="form-group">
+        <label>Days <span class="optional">(optional, default: 7)</span></label>
+        <input id="days" type="number" value="7" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="domain_frequency">
+      <div class="form-group">
+        <label style="color: #6c757d;">No parameters needed</label>
+      </div>
+    </div>
+
+    <div class="section" data-operation="domain_time_distribution">
+      <div class="form-group">
+        <label>Domain filter <span class="optional">(optional, leave empty for all domains)</span></label>
+        <input id="domain_filter" type="text" placeholder="youtube.com" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="category_inference">
+      <div class="form-group">
+        <label style="color: #6c757d;">No parameters needed</label>
+      </div>
+    </div>
+
+    <div class="section" data-operation="productivity_vs_distraction">
+      <div class="form-group">
+        <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
+        <input id="date" type="date" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="repeated_daily_habits">
+      <div class="form-group">
+        <label>Days <span class="optional">(optional, default: 30)</span></label>
+        <input id="days" type="number" value="30" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="emerging_interests">
+      <div class="form-group">
+        <label>Days <span class="optional">(optional, default: 7)</span></label>
+        <input id="days" type="number" value="7" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="browser_usage_timeline">
+      <div class="form-group">
+        <label>Hours <span class="optional">(optional, default: 24)</span></label>
+        <input id="hours" type="number" value="24" min="1" />
+      </div>
+    </div>
+
+    <div class="section" data-operation="neighbor_visits">
+      <div class="form-group">
+        <label>Anchor URL contains <span class="required">*</span></label>
+        <input id="anchor" type="text" placeholder="etsy.com" />
+      </div>
+      <div class="form-group">
+        <label>Radius (minutes) <span class="optional">(optional, default: 30)</span></label>
+        <input id="radius" type="number" value="30" min="1" />
+      </div>
+    </div>
+
+    <button id="send" disabled>🚀 Run Query</button>
+
+    <div id="output"></div>
   </div>
-
-  <label>Operation</label>
-  <select id="operation">
-    <option value="">Select</option>
-    <optgroup label="Top & Frequency">
-      <option value="top_links">1. Top visited links</option>
-      <option value="top_domains">2. Top domains</option>
-      <option value="top_domains_by_day">Top domains by day</option>
-      <option value="domain_frequency">13. Domain frequency</option>
-    </optgroup>
-    <optgroup label="Time Analysis">
-      <option value="visits_by_time_of_day">3. Visits by time of day</option>
-      <option value="domain_time_distribution">14. Domain time distribution</option>
-      <option value="browser_usage_timeline">19. Browser usage timeline</option>
-    </optgroup>
-    <optgroup label="Navigation & Patterns">
-      <option value="sessions">4. Sessions</option>
-      <option value="before_after_navigation">5. Before/after navigation</option>
-      <option value="navigation_paths">11. Most common navigation paths</option>
-      <option value="repeated_patterns">12. Repeated patterns</option>
-      <option value="neighbor_visits">Neighbor visits</option>
-    </optgroup>
-    <optgroup label="Summary & Trends">
-      <option value="daily_summary">6. Daily browsing summary</option>
-      <option value="new_vs_familiar">7. New vs familiar sites</option>
-      <option value="repeated_daily_habits">17. Repeated daily habits</option>
-      <option value="emerging_interests">18. Emerging interests</option>
-    </optgroup>
-    <optgroup label="Categories & Productivity">
-      <option value="category_tagging">8. Category tagging</option>
-      <option value="category_inference">15. Category inference</option>
-      <option value="productivity_vs_distraction">16. Productivity vs distraction</option>
-    </optgroup>
-    <optgroup label="Search & Export">
-      <option value="history_search">9. History search</option>
-      <option value="export_data">10. Export data</option>
-    </optgroup>
-  </select>
-
-  <div class="section" data-operation="top_links">
-    <label>Limit <span class="optional">(optional, default: 10)</span></label>
-    <input id="limit" type="number" value="10" />
-  </div>
-
-  <div class="section" data-operation="top_domains">
-    <label>Limit <span class="optional">(optional, default: 10)</span></label>
-    <input id="limit" type="number" value="10" />
-  </div>
-
-  <div class="section" data-operation="top_domains_by_day">
-    <label>Date <span class="required">*</span></label>
-    <input id="date" type="date" />
-  </div>
-
-  <div class="section" data-operation="visits_by_time_of_day">
-    <label>No parameters needed</label>
-  </div>
-
-  <div class="section" data-operation="sessions">
-    <label>Session gap (minutes) <span class="optional">(optional, default: 30)</span></label>
-    <input id="session_gap" type="number" value="30" />
-  </div>
-
-  <div class="section" data-operation="before_after_navigation">
-    <label>Anchor domain <span class="required">*</span></label>
-    <input id="anchor_domain" type="text" placeholder="youtube.com" />
-
-    <label>Direction <span class="optional">(optional, default: after)</span></label>
-    <select id="direction">
-      <option value="after">After</option>
-      <option value="before">Before</option>
-    </select>
-  </div>
-
-  <div class="section" data-operation="daily_summary">
-    <label>Days <span class="optional">(optional, default: 1)</span></label>
-    <input id="days" type="number" value="1" />
-  </div>
-
-  <div class="section" data-operation="new_vs_familiar">
-    <label>Days <span class="optional">(optional, default: 7)</span></label>
-    <input id="days" type="number" value="7" />
-  </div>
-
-  <div class="section" data-operation="category_tagging">
-    <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
-    <input id="date" type="date" />
-  </div>
-
-  <div class="section" data-operation="history_search">
-    <label>Search query <span class="required">*</span></label>
-    <input id="search_query" type="text" placeholder="python" />
-  </div>
-
-  <div class="section" data-operation="export_data">
-    <label>Format <span class="optional">(optional, default: json)</span></label>
-    <select id="export_format">
-      <option value="json">JSON</option>
-    </select>
-  </div>
-
-  <div class="section" data-operation="navigation_paths">
-    <label>Limit <span class="optional">(optional, default: 10)</span></label>
-    <input id="limit" type="number" value="10" />
-  </div>
-
-  <div class="section" data-operation="repeated_patterns">
-    <label>Days <span class="optional">(optional, default: 7)</span></label>
-    <input id="days" type="number" value="7" />
-  </div>
-
-  <div class="section" data-operation="domain_frequency">
-    <label>No parameters needed</label>
-  </div>
-
-  <div class="section" data-operation="domain_time_distribution">
-    <label>Domain filter <span class="optional">(optional, leave empty for all domains)</span></label>
-    <input id="domain_filter" type="text" placeholder="youtube.com" />
-  </div>
-
-  <div class="section" data-operation="category_inference">
-    <label>No parameters needed</label>
-  </div>
-
-  <div class="section" data-operation="productivity_vs_distraction">
-    <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
-    <input id="date" type="date" />
-  </div>
-
-  <div class="section" data-operation="repeated_daily_habits">
-    <label>Days <span class="optional">(optional, default: 30)</span></label>
-    <input id="days" type="number" value="30" />
-  </div>
-
-  <div class="section" data-operation="emerging_interests">
-    <label>Days <span class="optional">(optional, default: 7)</span></label>
-    <input id="days" type="number" value="7" />
-  </div>
-
-  <div class="section" data-operation="browser_usage_timeline">
-    <label>Hours <span class="optional">(optional, default: 24)</span></label>
-    <input id="hours" type="number" value="24" />
-  </div>
-
-  <div class="section" data-operation="neighbor_visits">
-    <label>Anchor URL contains <span class="required">*</span></label>
-    <input id="anchor" type="text" placeholder="etsy.com" />
-
-    <label>Radius (minutes) <span class="optional">(optional, default: 30)</span></label>
-    <input id="radius" type="number" value="30" />
-  </div>
-
-  <button id="send" disabled>Run Query</button>
-
-  <pre id="output"></pre>
 
   <script src="popup.js"></script>
 </body>

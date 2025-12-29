@@ -854,6 +854,645 @@ function runLocalNeighborVisits(data, anchor, radiusMinutes) {
   };
 }
 
+// Visualization functions
+function showLoading() {
+  const output = document.getElementById("output");
+  output.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>Analyzing your browsing history...</div>
+    </div>
+  `;
+}
+
+function showError(message) {
+  const output = document.getElementById("output");
+  output.innerHTML = `<div class="error">${message}</div>`;
+}
+
+function renderTopLinks(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
+  }
+
+  const maxCount = Math.max(...data.map(item => item.visit_count || 0));
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🔗 Top Visited Links</div>';
+  html += '<div class="bar-chart">';
+
+  data.forEach((item, index) => {
+    const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
+    const url = item.url || '';
+    const domain = getDomain(url);
+    html += `
+      <div class="bar-item">
+        <div class="bar-label" title="${url}">
+          <strong>#${index + 1}</strong> ${domain || 'Unknown'}
+        </div>
+        <div class="bar-container">
+          <div class="bar-fill" style="width: ${percentage}%">${item.visit_count}</div>
+        </div>
+        <div class="bar-value">${item.visit_count}</div>
+      </div>
+    `;
+  });
+
+  html += '</div></div></div>';
+  return html;
+}
+
+function renderTopDomains(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
+  }
+
+  const maxCount = Math.max(...data.map(item => item.visit_count || 0));
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🌐 Top Domains</div>';
+  html += '<div class="bar-chart">';
+
+  data.forEach((item, index) => {
+    const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
+    const category = getCategory(item.domain);
+    html += `
+      <div class="bar-item">
+        <div class="bar-label">
+          <strong>#${index + 1}</strong> ${item.domain}
+          <span class="category-badge category-${category.toLowerCase().replace(' ', '-')}">${category}</span>
+        </div>
+        <div class="bar-container">
+          <div class="bar-fill" style="width: ${percentage}%">${item.visit_count}</div>
+        </div>
+        <div class="bar-value">${item.visit_count}</div>
+      </div>
+    `;
+  });
+
+  html += '</div></div></div>';
+  return html;
+}
+
+function renderVisitsByTimeOfDay(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">⏰ Visits by Time of Day</div>';
+
+  data.forEach(slot => {
+    html += `<div class="time-slot">`;
+    html += `<div class="time-slot-header">${slot.time_slot}</div>`;
+    html += '<div class="bar-chart">';
+
+    const maxCount = Math.max(...slot.domains.map(d => d.visit_count || 0));
+
+    slot.domains.slice(0, 5).forEach(domain => {
+      const percentage = maxCount > 0 ? (domain.visit_count / maxCount) * 100 : 0;
+      html += `
+        <div class="bar-item">
+          <div class="bar-label">${domain.domain}</div>
+          <div class="bar-container">
+            <div class="bar-fill" style="width: ${percentage}%">${domain.visit_count}</div>
+          </div>
+          <div class="bar-value">${domain.visit_count}</div>
+        </div>
+      `;
+    });
+
+    html += '</div></div>';
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderSessions(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No sessions found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">📅 Browsing Sessions</div>';
+
+  data.slice(0, 10).forEach((session, index) => {
+    const start = new Date(session.start);
+    const end = new Date(session.end);
+    html += `
+      <div class="session-card">
+        <div class="session-time">
+          <strong>Session #${index + 1}</strong> • ${start.toLocaleString()} → ${end.toLocaleString()}
+        </div>
+        <div class="session-stats">
+          <div class="session-stat">⏱️ ${session.duration_minutes} min</div>
+          <div class="session-stat">🔗 ${session.visit_count} visits</div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderDailySummary(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+
+  data.forEach(day => {
+    html += '<div class="card">';
+    html += `<div class="card-header">📊 ${day.date}</div>`;
+    html += '<div class="stats-grid">';
+    html += `<div class="stat-card"><div class="stat-value">${day.total_visits}</div><div class="stat-label">Total Visits</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${day.unique_domains}</div><div class="stat-label">Unique Domains</div></div>`;
+    html += '</div>';
+
+    if (day.top_domains && day.top_domains.length > 0) {
+      html += '<div style="margin-top: 16px;"><strong>Top Domains:</strong></div>';
+      html += '<div class="bar-chart">';
+      const maxCount = Math.max(...day.top_domains.map(d => d.count || 0));
+      day.top_domains.forEach(domain => {
+        const percentage = maxCount > 0 ? (domain.count / maxCount) * 100 : 0;
+        html += `
+          <div class="bar-item">
+            <div class="bar-label">${domain.domain}</div>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: ${percentage}%">${domain.count}</div>
+            </div>
+            <div class="bar-value">${domain.count}</div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function renderCategoryTagging(data) {
+  if (!data.categories || data.categories.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🏷️ Category Tagging</div>';
+
+  const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
+
+  data.categories.forEach(category => {
+    const percentage = maxCount > 0 ? (category.visit_count / maxCount) * 100 : 0;
+    html += `
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <strong>${category.category}</strong>
+          <span style="font-weight: 600;">${category.visit_count} visits</span>
+        </div>
+        <div class="bar-container">
+          <div class="bar-fill" style="width: ${percentage}%"></div>
+        </div>
+        ${category.top_domains && category.top_domains.length > 0 ? `
+          <div style="margin-top: 8px; font-size: 12px; color: #6c757d;">
+            ${category.top_domains.map(d => d.domain).join(', ')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderProductivityVsDistraction(data) {
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">⚖️ Productivity vs Distraction</div>';
+  html += '<div class="stats-grid">';
+  html += `<div class="stat-card" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);">
+    <div class="stat-value">${data.productive.count}</div>
+    <div class="stat-label">Productive (${data.productive.percentage})</div>
+  </div>`;
+  html += `<div class="stat-card" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);">
+    <div class="stat-value">${data.distracting.count}</div>
+    <div class="stat-label">Distracting (${data.distracting.percentage})</div>
+  </div>`;
+  html += '</div>';
+
+  if (data.productive.top_domains && data.productive.top_domains.length > 0) {
+    html += '<div style="margin-top: 16px;"><strong>Top Productive Sites:</strong></div>';
+    data.productive.top_domains.forEach(domain => {
+      html += `<div class="list-item"><div class="list-item-content"><div class="list-item-title">${domain.domain}</div></div><div class="list-item-value">${domain.count}</div></div>`;
+    });
+  }
+
+  if (data.distracting.top_domains && data.distracting.top_domains.length > 0) {
+    html += '<div style="margin-top: 16px;"><strong>Top Distracting Sites:</strong></div>';
+    data.distracting.top_domains.forEach(domain => {
+      html += `<div class="list-item"><div class="list-item-content"><div class="list-item-title">${domain.domain}</div></div><div class="list-item-value">${domain.count}</div></div>`;
+    });
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderHistorySearch(data) {
+  if (!data.matches || data.matches.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">🔍</div><div>No matches found for "' + data.query + '"</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🔍 Search Results: "' + data.query + '"</div>';
+  html += `<div style="margin-bottom: 12px; color: #6c757d;">Found ${data.match_count} matches</div>`;
+
+  data.matches.forEach(match => {
+    const domain = match.domain || getDomain(match.url);
+    html += `
+      <div class="list-item">
+        <div class="list-item-content">
+          <div class="list-item-title">${match.title || match.url}</div>
+          <div class="list-item-subtitle">${domain} • ${new Date(match.visited_at).toLocaleString()}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderNavigationPaths(data) {
+  if (!data.most_common_paths || data.most_common_paths.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No navigation paths found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🛤️ Most Common Navigation Paths</div>';
+
+  const maxCount = Math.max(...data.most_common_paths.map(p => p.count || 0));
+
+  data.most_common_paths.forEach(path => {
+    const percentage = maxCount > 0 ? (path.count / maxCount) * 100 : 0;
+    html += `
+      <div class="path-item">
+        <div style="flex: 1;">
+          <strong>${path.from}</strong>
+          <span class="path-arrow"> → </span>
+          <strong>${path.to}</strong>
+        </div>
+        <div class="bar-container" style="width: 150px;">
+          <div class="bar-fill" style="width: ${percentage}%">${path.count}</div>
+        </div>
+        <div class="bar-value">${path.count}</div>
+      </div>
+    `;
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderNewVsFamiliar(data) {
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🆕 New vs Familiar Sites</div>';
+  html += '<div class="stats-grid">';
+  html += `<div class="stat-card"><div class="stat-value">${data.new_site_count}</div><div class="stat-label">New Sites</div></div>`;
+  html += `<div class="stat-card"><div class="stat-value">${data.familiar_site_count}</div><div class="stat-label">Familiar Sites</div></div>`;
+  html += '</div>';
+
+  if (data.new_sites && data.new_sites.length > 0) {
+    html += '<div style="margin-top: 16px;"><strong>New Sites:</strong></div>';
+    data.new_sites.slice(0, 10).forEach(site => {
+      html += `<div class="list-item"><div class="list-item-content"><div class="list-item-title">${site.domain}</div><div class="list-item-subtitle">First visit: ${new Date(site.first_visit).toLocaleDateString()}</div></div><div class="list-item-value">${site.recent_visit_count}</div></div>`;
+    });
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderBeforeAfterNavigation(data) {
+  if (data.error) {
+    return `<div class="error">Anchor domain "${data.anchor_domain}" not found in history</div>`;
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🧭 Navigation ' + (data.direction === 'after' ? 'After' : 'Before') + ' ' + data.anchor_domain + '</div>';
+
+  if (data.most_common && data.most_common.length > 0) {
+    const maxCount = Math.max(...data.most_common.map(d => d.count || 0));
+    html += '<div class="bar-chart">';
+    data.most_common.forEach(item => {
+      const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+      html += `
+        <div class="bar-item">
+          <div class="bar-label">${item.domain}</div>
+          <div class="bar-container">
+            <div class="bar-fill" style="width: ${percentage}%">${item.count}</div>
+          </div>
+          <div class="bar-value">${item.count}</div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderNeighborVisits(data) {
+  if (data.error) {
+    return `<div class="error">Anchor URL not found in history</div>`;
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🔗 Neighbor Visits</div>';
+  html += `<div style="margin-bottom: 12px; color: #6c757d;">Around ${data.anchor_domain} at ${new Date(data.anchor_time).toLocaleString()}</div>`;
+
+  if (data.domain_counts && data.domain_counts.length > 0) {
+    const maxCount = Math.max(...data.domain_counts.map(d => d.count || 0));
+    html += '<div class="bar-chart">';
+    data.domain_counts.forEach(item => {
+      const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+      html += `
+        <div class="bar-item">
+          <div class="bar-label">${item.domain}</div>
+          <div class="bar-container">
+            <div class="bar-fill" style="width: ${percentage}%">${item.count}</div>
+          </div>
+          <div class="bar-value">${item.count}</div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderCategoryInference(data) {
+  if (!data.categories || data.categories.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🏷️ Category Inference</div>';
+
+  const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
+
+  data.categories.forEach(category => {
+    const percentage = maxCount > 0 ? (category.visit_count / maxCount) * 100 : 0;
+    html += `
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <strong>${category.category}</strong>
+          <span style="font-weight: 600;">${category.visit_count} visits (${category.percentage})</span>
+        </div>
+        <div class="bar-container">
+          <div class="bar-fill" style="width: ${percentage}%"></div>
+        </div>
+        <div style="margin-top: 4px; font-size: 12px; color: #6c757d;">
+          ${category.unique_domains} unique domains
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderRepeatedPatterns(data) {
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">🔄 Repeated Patterns (Last ' + data.period_days + ' days)</div>';
+
+  if (data.by_hour && data.by_hour.length > 0) {
+    html += '<div style="margin-bottom: 20px;"><strong>By Hour of Day:</strong></div>';
+    data.by_hour.forEach(hourData => {
+      html += `<div style="margin-bottom: 12px;"><strong>${hourData.hour}:00</strong>`;
+      if (hourData.top_domains && hourData.top_domains.length > 0) {
+        hourData.top_domains.forEach(domain => {
+          html += `<span class="category-badge category-other" style="margin-left: 8px;">${domain.domain} (${domain.count})</span>`;
+        });
+      }
+      html += '</div>';
+    });
+  }
+
+  if (data.by_day_of_week && data.by_day_of_week.length > 0) {
+    html += '<div style="margin-top: 20px; margin-bottom: 12px;"><strong>By Day of Week:</strong></div>';
+    data.by_day_of_week.forEach(dayData => {
+      html += `<div style="margin-bottom: 12px;"><strong>${dayData.day}</strong>`;
+      if (dayData.top_domains && dayData.top_domains.length > 0) {
+        dayData.top_domains.forEach(domain => {
+          html += `<span class="category-badge category-other" style="margin-left: 8px;">${domain.domain} (${domain.count})</span>`;
+        });
+      }
+      html += '</div>';
+    });
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderRepeatedDailyHabits(data) {
+  if (!data.daily_habits || data.daily_habits.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No daily habits found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">📅 Repeated Daily Habits (Last ' + data.period_days + ' days)</div>';
+
+  data.daily_habits.forEach(habit => {
+    html += `
+      <div class="list-item">
+        <div class="list-item-content">
+          <div class="list-item-title">${habit.domain}</div>
+          <div class="list-item-subtitle">${habit.days_visited} days visited • ${habit.visit_frequency} frequency</div>
+        </div>
+        <span class="category-badge category-${habit.category.toLowerCase().replace(' ', '-')}">${habit.category}</span>
+      </div>
+    `;
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderEmergingInterests(data) {
+  if (!data.emerging_interests || data.emerging_interests.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No emerging interests found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">📈 Emerging Interests (Last ' + data.period_days + ' days)</div>';
+
+  data.emerging_interests.forEach(interest => {
+    html += `
+      <div class="list-item">
+        <div class="list-item-content">
+          <div class="list-item-title">${interest.domain}</div>
+          <div class="list-item-subtitle">${interest.recent_visits} recent visits (was ${interest.previous_visits}) • ${interest.growth} growth</div>
+        </div>
+        <span class="category-badge category-${interest.category.toLowerCase().replace(' ', '-')}">${interest.category}</span>
+      </div>
+    `;
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderBrowserUsageTimeline(data) {
+  if (!data.timeline || data.timeline.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No timeline data found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">⏱️ Browser Usage Timeline (Last ' + data.period_hours + ' hours)</div>';
+
+  if (data.hourly_summary && data.hourly_summary.length > 0) {
+    html += '<div style="margin-bottom: 16px;"><strong>Hourly Summary:</strong></div>';
+    const maxCount = Math.max(...data.hourly_summary.map(h => h.visit_count || 0));
+    data.hourly_summary.forEach(hour => {
+      const percentage = maxCount > 0 ? (hour.visit_count / maxCount) * 100 : 0;
+      html += `
+        <div class="bar-item">
+          <div class="bar-label">${hour.hour}:00 (${hour.unique_domains} domains)</div>
+          <div class="bar-container">
+            <div class="bar-fill" style="width: ${percentage}%">${hour.visit_count}</div>
+          </div>
+          <div class="bar-value">${hour.visit_count}</div>
+        </div>
+      `;
+    });
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderDomainTimeDistribution(data) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
+  }
+
+  let html = '<div class="result-container">';
+
+  data.forEach(domainData => {
+    html += '<div class="card">';
+    html += `<div class="card-header">⏰ ${domainData.domain}</div>`;
+    html += `<div style="margin-bottom: 12px; color: #6c757d;">Peak hour: ${domainData.peak_hour}:00</div>`;
+
+    if (domainData.hourly_distribution && domainData.hourly_distribution.length > 0) {
+      const maxCount = Math.max(...domainData.hourly_distribution.map(h => h.count || 0));
+      html += '<div class="bar-chart">';
+      domainData.hourly_distribution.forEach(hour => {
+        const percentage = maxCount > 0 ? (hour.count / maxCount) * 100 : 0;
+        html += `
+          <div class="bar-item">
+            <div class="bar-label">${hour.hour}:00</div>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: ${percentage}%">${hour.count}</div>
+            </div>
+            <div class="bar-value">${hour.count}</div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function renderResult(operation, result) {
+  const output = document.getElementById("output");
+
+  if (result.error) {
+    showError(result.error);
+    return;
+  }
+
+  switch (operation) {
+    case 'top_links':
+      output.innerHTML = renderTopLinks(result);
+      break;
+    case 'top_domains':
+    case 'top_domains_by_day':
+      output.innerHTML = renderTopDomains(result);
+      break;
+    case 'domain_frequency':
+      output.innerHTML = renderTopDomains(result);
+      break;
+    case 'visits_by_time_of_day':
+      output.innerHTML = renderVisitsByTimeOfDay(result);
+      break;
+    case 'sessions':
+      output.innerHTML = renderSessions(result);
+      break;
+    case 'daily_summary':
+      output.innerHTML = renderDailySummary(result);
+      break;
+    case 'category_tagging':
+      output.innerHTML = renderCategoryTagging(result);
+      break;
+    case 'category_inference':
+      output.innerHTML = renderCategoryInference(result);
+      break;
+    case 'productivity_vs_distraction':
+      output.innerHTML = renderProductivityVsDistraction(result);
+      break;
+    case 'history_search':
+      output.innerHTML = renderHistorySearch(result);
+      break;
+    case 'navigation_paths':
+      output.innerHTML = renderNavigationPaths(result);
+      break;
+    case 'new_vs_familiar':
+      output.innerHTML = renderNewVsFamiliar(result);
+      break;
+    case 'before_after_navigation':
+      output.innerHTML = renderBeforeAfterNavigation(result);
+      break;
+    case 'neighbor_visits':
+      output.innerHTML = renderNeighborVisits(result);
+      break;
+    case 'repeated_patterns':
+      output.innerHTML = renderRepeatedPatterns(result);
+      break;
+    case 'repeated_daily_habits':
+      output.innerHTML = renderRepeatedDailyHabits(result);
+      break;
+    case 'emerging_interests':
+      output.innerHTML = renderEmergingInterests(result);
+      break;
+    case 'browser_usage_timeline':
+      output.innerHTML = renderBrowserUsageTimeline(result);
+      break;
+    case 'domain_time_distribution':
+      output.innerHTML = renderDomainTimeDistribution(result);
+      break;
+    default:
+      // Fallback to JSON for operations without specific renderers
+      output.innerHTML = `<div class="card"><div class="card-header">Result</div><pre style="background: #f8f9fa; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(result, null, 2)}</pre></div>`;
+  }
+}
+
 // Get mode preference
 function getMode() {
   return new Promise((resolve) => {
@@ -951,6 +1590,7 @@ document.getElementById("send").onclick = async () => {
     return;
   }
 
+  showLoading();
   const mode = getCurrentMode();
 
   // Determine time range based on operation
@@ -1066,14 +1706,12 @@ document.getElementById("send").onclick = async () => {
             a.download = `browsing_history_${new Date().toISOString().split('T')[0]}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            document.getElementById("output").textContent = "Export downloaded!";
+            document.getElementById("output").innerHTML = '<div class="card"><div class="card-header">✅ Export Complete</div><div class="card-content">Your browsing history has been downloaded!</div></div>';
           } else {
-            document.getElementById("output").textContent =
-              JSON.stringify(result, null, 2);
+            renderResult(op, result);
           }
         } catch (error) {
-          document.getElementById("output").textContent =
-            JSON.stringify({ error: error.message, stack: error.stack }, null, 2);
+          showError(`Error: ${error.message}`);
         }
       } else {
         // Send to MCP (existing MCP operations only)
@@ -1112,8 +1750,7 @@ document.getElementById("send").onclick = async () => {
         });
 
         const json = await res.json();
-        document.getElementById("output").textContent =
-          JSON.stringify(json, null, 2);
+        renderResult(op, json);
       }
     }
   );
