@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>MCP History Explorer</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      width: 340px;
+      padding: 10px;
+    }
+
+    h3 {
+      margin-top: 0;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+
+    .required {
+      color: #d32f2f;
+    }
+
+    .optional {
+      color: #666;
+      font-weight: normal;
+    }
+
+    select, input, textarea, button {
+      width: 100%;
+      margin-top: 4px;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      height: 80px;
+      font-family: monospace;
+    }
+
+    button {
+      margin-top: 12px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    pre {
+      margin-top: 10px;
+      background: #f4f4f4;
+      padding: 8px;
+      max-height: 250px;
+      overflow: auto;
+      font-size: 12px;
+    }
+
+    .section {
+      border-top: 1px solid #ddd;
+      margin-top: 10px;
+      padding-top: 10px;
+      display: none;
+    }
+
+    .section.visible {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <h3>MCP History Explorer</h3>
+
+  <label>Operation</label>
+  <select id="operation">
+    <option value="">Select</option>
+    <option value="top_links">Top visited links</option>
+    <option value="top_domains_by_day">Top domains by day</option>
+    <option value="neighbor_visits">Neighbor visits</option>
+  </select>
+
+  <div class="section" data-operation="top_links">
+    <label>Limit <span class="optional">(optional, default: 5)</span></label>
+    <input id="limit" type="number" value="5" />
+  </div>
+
+  <div class="section" data-operation="top_domains_by_day">
+    <label>Date <span class="required">*</span></label>
+    <input id="date" type="date" />
+  </div>
+
+  <div class="section" data-operation="neighbor_visits">
+    <label>Anchor URL contains <span class="required">*</span></label>
+    <input id="anchor" type="text" placeholder="etsy.com" />
+
+    <label>Radius (minutes) <span class="optional">(optional, default: 30)</span></label>
+    <input id="radius" type="number" value="30" />
+  </div>
+
+  <button id="send" disabled>Run Query</button>
+
+  <pre id="output"></pre>
+
+  <script src="popup.js"></script>
+</body>
+</html>
