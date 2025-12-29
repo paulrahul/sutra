@@ -25,6 +25,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // If getVisits fails, fall back to the single visit from search
                 resolve([{
                   url: result.url,
+                  title: result.title || '',
                   visited_at: new Date(result.lastVisitTime).toISOString()
                 }]);
                 return;
@@ -36,6 +37,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 .filter((visit) => visit.visitTime >= startTime)
                 .map((visit) => ({
                   url: result.url,
+                  title: result.title || '',
                   visited_at: new Date(visit.visitTime).toISOString()
                 }));
 
@@ -43,6 +45,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               if (filteredVisits.length === 0 && result.lastVisitTime >= startTime) {
                 resolve([{
                   url: result.url,
+                  title: result.title || '',
                   visited_at: new Date(result.lastVisitTime).toISOString()
                 }]);
               } else {

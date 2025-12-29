@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: sans-serif;
-      width: 340px;
+      width: 400px;
       padding: 10px;
     }
 
@@ -73,65 +73,44 @@
       display: block;
     }
 
-    .toggle-container {
+    .mode-container {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 15px;
       margin-bottom: 15px;
       padding: 8px 0;
       border-bottom: 1px solid #eee;
     }
 
-    .toggle-label {
+    .mode-label {
+      font-size: 12px;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .radio-option input[type="radio"] {
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .radio-option label {
       font-size: 12px;
       font-weight: normal;
       margin: 0;
-      display: inline;
-    }
-
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 50px;
-      height: 24px;
-    }
-
-    .toggle-switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .toggle-slider {
-      position: absolute;
       cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: 0.3s;
-      border-radius: 24px;
-    }
-
-    .toggle-slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: 0.3s;
-      border-radius: 50%;
-    }
-
-    .toggle-switch input:checked + .toggle-slider {
-      background-color: #4CAF50;
-    }
-
-    .toggle-switch input:checked + .toggle-slider:before {
-      transform: translateX(26px);
     }
   </style>
 </head>
@@ -139,32 +118,161 @@
 <body>
   <h3>MCP History Explorer</h3>
 
-  <div class="toggle-container">
-    <span class="toggle-label">
-      <span id="modeLabel">Local Mode</span>
-    </span>
-    <label class="toggle-switch">
-      <input type="checkbox" id="modeToggle" checked />
-      <span class="toggle-slider"></span>
-    </label>
+  <div class="mode-container">
+    <span class="mode-label">Mode:</span>
+    <div class="radio-group">
+      <div class="radio-option">
+        <input type="radio" id="modeLocal" name="mode" value="local" checked />
+        <label for="modeLocal">Local</label>
+      </div>
+      <div class="radio-option">
+        <input type="radio" id="modeMCP" name="mode" value="mcp" />
+        <label for="modeMCP">MCP</label>
+      </div>
+    </div>
   </div>
 
   <label>Operation</label>
   <select id="operation">
     <option value="">Select</option>
-    <option value="top_links">Top visited links</option>
-    <option value="top_domains_by_day">Top domains by day</option>
-    <option value="neighbor_visits">Neighbor visits</option>
+    <optgroup label="Top & Frequency">
+      <option value="top_links">1. Top visited links</option>
+      <option value="top_domains">2. Top domains</option>
+      <option value="top_domains_by_day">Top domains by day</option>
+      <option value="domain_frequency">13. Domain frequency</option>
+    </optgroup>
+    <optgroup label="Time Analysis">
+      <option value="visits_by_time_of_day">3. Visits by time of day</option>
+      <option value="domain_time_distribution">14. Domain time distribution</option>
+      <option value="browser_usage_timeline">19. Browser usage timeline</option>
+    </optgroup>
+    <optgroup label="Navigation & Patterns">
+      <option value="sessions">4. Sessions</option>
+      <option value="before_after_navigation">5. Before/after navigation</option>
+      <option value="navigation_paths">11. Most common navigation paths</option>
+      <option value="repeated_patterns">12. Repeated patterns</option>
+      <option value="neighbor_visits">Neighbor visits</option>
+    </optgroup>
+    <optgroup label="Summary & Trends">
+      <option value="daily_summary">6. Daily browsing summary</option>
+      <option value="new_vs_familiar">7. New vs familiar sites</option>
+      <option value="repeated_daily_habits">17. Repeated daily habits</option>
+      <option value="emerging_interests">18. Emerging interests</option>
+    </optgroup>
+    <optgroup label="Categories & Productivity">
+      <option value="category_tagging">8. Category tagging</option>
+      <option value="category_inference">15. Category inference</option>
+      <option value="productivity_vs_distraction">16. Productivity vs distraction</option>
+    </optgroup>
+    <optgroup label="Search & Export">
+      <option value="history_search">9. History search</option>
+      <option value="export_data">10. Export data</option>
+    </optgroup>
   </select>
 
   <div class="section" data-operation="top_links">
-    <label>Limit <span class="optional">(optional, default: 5)</span></label>
-    <input id="limit" type="number" value="5" />
+    <label>Limit <span class="optional">(optional, default: 10)</span></label>
+    <input id="limit" type="number" value="10" />
+  </div>
+
+  <div class="section" data-operation="top_domains">
+    <label>Limit <span class="optional">(optional, default: 10)</span></label>
+    <input id="limit" type="number" value="10" />
   </div>
 
   <div class="section" data-operation="top_domains_by_day">
     <label>Date <span class="required">*</span></label>
     <input id="date" type="date" />
+  </div>
+
+  <div class="section" data-operation="visits_by_time_of_day">
+    <label>No parameters needed</label>
+  </div>
+
+  <div class="section" data-operation="sessions">
+    <label>Session gap (minutes) <span class="optional">(optional, default: 30)</span></label>
+    <input id="session_gap" type="number" value="30" />
+  </div>
+
+  <div class="section" data-operation="before_after_navigation">
+    <label>Anchor domain <span class="required">*</span></label>
+    <input id="anchor_domain" type="text" placeholder="youtube.com" />
+
+    <label>Direction <span class="optional">(optional, default: after)</span></label>
+    <select id="direction">
+      <option value="after">After</option>
+      <option value="before">Before</option>
+    </select>
+  </div>
+
+  <div class="section" data-operation="daily_summary">
+    <label>Days <span class="optional">(optional, default: 1)</span></label>
+    <input id="days" type="number" value="1" />
+  </div>
+
+  <div class="section" data-operation="new_vs_familiar">
+    <label>Days <span class="optional">(optional, default: 7)</span></label>
+    <input id="days" type="number" value="7" />
+  </div>
+
+  <div class="section" data-operation="category_tagging">
+    <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
+    <input id="date" type="date" />
+  </div>
+
+  <div class="section" data-operation="history_search">
+    <label>Search query <span class="required">*</span></label>
+    <input id="search_query" type="text" placeholder="python" />
+  </div>
+
+  <div class="section" data-operation="export_data">
+    <label>Format <span class="optional">(optional, default: json)</span></label>
+    <select id="export_format">
+      <option value="json">JSON</option>
+    </select>
+  </div>
+
+  <div class="section" data-operation="navigation_paths">
+    <label>Limit <span class="optional">(optional, default: 10)</span></label>
+    <input id="limit" type="number" value="10" />
+  </div>
+
+  <div class="section" data-operation="repeated_patterns">
+    <label>Days <span class="optional">(optional, default: 7)</span></label>
+    <input id="days" type="number" value="7" />
+  </div>
+
+  <div class="section" data-operation="domain_frequency">
+    <label>No parameters needed</label>
+  </div>
+
+  <div class="section" data-operation="domain_time_distribution">
+    <label>Domain filter <span class="optional">(optional, leave empty for all domains)</span></label>
+    <input id="domain_filter" type="text" placeholder="youtube.com" />
+  </div>
+
+  <div class="section" data-operation="category_inference">
+    <label>No parameters needed</label>
+  </div>
+
+  <div class="section" data-operation="productivity_vs_distraction">
+    <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
+    <input id="date" type="date" />
+  </div>
+
+  <div class="section" data-operation="repeated_daily_habits">
+    <label>Days <span class="optional">(optional, default: 30)</span></label>
+    <input id="days" type="number" value="30" />
+  </div>
+
+  <div class="section" data-operation="emerging_interests">
+    <label>Days <span class="optional">(optional, default: 7)</span></label>
+    <input id="days" type="number" value="7" />
+  </div>
+
+  <div class="section" data-operation="browser_usage_timeline">
+    <label>Hours <span class="optional">(optional, default: 24)</span></label>
+    <input id="hours" type="number" value="24" />
   </div>
 
   <div class="section" data-operation="neighbor_visits">
