@@ -832,7 +832,7 @@
   <div class="container">
     <div class="header">
       <h1>Sutra: Smart History Explorer</h1>
-      <p>Analyze your browsing patterns with beautiful visualizations</p>
+      <p>Insights from your browsing patterns</p>
     </div>
 
     <div class="mode-container">
@@ -851,14 +851,8 @@
 
     <!-- Local Mode: Category-based Navigation -->
     <div id="localModeNavigation" style="display: none;">
-      <!-- Category Navigation Links -->
-      <div class="category-nav-links" id="categoryNavLinks">
-        <a href="#" class="category-nav-link" data-category="history">History Operations</a>
-        <span class="category-nav-separator">|</span>
-        <a href="#" class="category-nav-link" data-category="stats">Stats</a>
-        <span class="category-nav-separator">|</span>
-        <a href="#" class="category-nav-link" data-category="trends">Trends</a>
-        <span class="category-nav-separator">|</span>
+      <!-- Category Navigation Links - Only Settings on the right -->
+      <div class="category-nav-links" id="categoryNavLinks" style="justify-content: flex-end;">
         <a href="#" class="category-nav-link" data-category="settings" id="settingsLink">⚙️ Settings</a>
       </div>
 
@@ -926,44 +920,62 @@
 
     <!-- MCP Mode: Dropdown (kept for MCP mode) -->
     <div id="mcpModeNavigation" style="display: none;">
-      <div class="form-group">
-        <label>Operation</label>
-        <select id="operation">
-          <option value="">Select an operation...</option>
-          <optgroup label="Top & Frequency">
-            <option value="top_links">Top visited links</option>
-            <option value="top_domains">Top domains</option>
-            <option value="top_domains_by_day">Top domains by day</option>
-            <option value="domain_frequency">Domain frequency</option>
-          </optgroup>
-          <optgroup label="Time Analysis">
-            <option value="visits_by_time_of_day">Visits by time of day</option>
-            <option value="domain_time_distribution">Domain time distribution</option>
-            <option value="browser_usage_timeline">Browser usage timeline</option>
-          </optgroup>
-          <optgroup label="Navigation & Patterns">
-            <option value="sessions">Sessions</option>
-            <option value="before_after_navigation">Before/after navigation</option>
-            <option value="navigation_paths">Most common navigation paths</option>
-            <option value="repeated_patterns">Repeated patterns</option>
-            <option value="neighbor_visits">Neighbor visits</option>
-          </optgroup>
-          <optgroup label="Summary & Trends">
-            <option value="daily_summary">Daily browsing summary</option>
-            <option value="new_vs_familiar">New vs familiar sites</option>
-            <option value="repeated_daily_habits">Repeated daily habits</option>
-            <option value="emerging_interests">Emerging interests</option>
-          </optgroup>
-          <optgroup label="Categories & Productivity">
-            <option value="category_tagging">Category tagging</option>
-            <option value="category_inference">Category inference</option>
-            <option value="productivity_vs_distraction">Productivity vs distraction</option>
-          </optgroup>
-          <optgroup label="Search & Export">
-            <option value="history_search">History search</option>
-            <option value="export_data">Export data</option>
-          </optgroup>
-        </select>
+      <!-- MCP Server Configuration Check -->
+      <div id="mcpServerNotConfigured" style="display: none;">
+        <div class="card" style="background: #fff3cd; border-color: #ffc107;">
+          <div class="card-header" style="color: #856404;">⚠️ MCP Server Not Configured</div>
+          <div class="card-content" style="color: #856404; margin-top: 12px;">
+            <p style="margin-bottom: 12px;">Please configure your MCP server URL before using MCP mode.</p>
+            <div class="form-group" style="margin-top: 16px;">
+              <label>MCP Server URL <span class="required">*</span></label>
+              <input type="text" id="mcpServerUrl" placeholder="http://localhost:8082" style="margin-bottom: 8px;" />
+              <button class="btn-small btn-primary" id="saveMcpServerBtn" style="width: 100%;">Save MCP Server URL</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MCP Operations UI (shown only when server is configured) -->
+      <div id="mcpOperationsUI" style="display: none;">
+        <div class="form-group">
+          <label>Operation</label>
+          <select id="operation">
+            <option value="">Select an operation...</option>
+            <optgroup label="Top & Frequency">
+              <option value="top_links">Top visited links</option>
+              <option value="top_domains">Top domains</option>
+              <option value="top_domains_by_day">Top domains by day</option>
+              <option value="domain_frequency">Domain frequency</option>
+            </optgroup>
+            <optgroup label="Time Analysis">
+              <option value="visits_by_time_of_day">Visits by time of day</option>
+              <option value="domain_time_distribution">Domain time distribution</option>
+              <option value="browser_usage_timeline">Browser usage timeline</option>
+            </optgroup>
+            <optgroup label="Navigation & Patterns">
+              <option value="sessions">Sessions</option>
+              <option value="before_after_navigation">Before/after navigation</option>
+              <option value="navigation_paths">Most common navigation paths</option>
+              <option value="repeated_patterns">Repeated patterns</option>
+              <option value="neighbor_visits">Neighbor visits</option>
+            </optgroup>
+            <optgroup label="Summary & Trends">
+              <option value="daily_summary">Daily browsing summary</option>
+              <option value="new_vs_familiar">New vs familiar sites</option>
+              <option value="repeated_daily_habits">Repeated daily habits</option>
+              <option value="emerging_interests">Emerging interests</option>
+            </optgroup>
+            <optgroup label="Categories & Productivity">
+              <option value="category_tagging">Category tagging</option>
+              <option value="category_inference">Category inference</option>
+              <option value="productivity_vs_distraction">Productivity vs distraction</option>
+            </optgroup>
+            <optgroup label="Search & Export">
+              <option value="history_search">History search</option>
+              <option value="export_data">Export data</option>
+            </optgroup>
+          </select>
+        </div>
       </div>
     </div>
 

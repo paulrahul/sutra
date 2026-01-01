@@ -2052,6 +2052,24 @@ function saveMode(mode) {
   chrome.storage.local.set({ mode });
 }
 
+// Get MCP server URL from storage
+function getMcpServerUrl() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['mcpServerUrl'], (result) => {
+      resolve(result.mcpServerUrl || null);
+    });
+  });
+}
+
+// Save MCP server URL to storage
+function saveMcpServerUrl(url) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ mcpServerUrl: url }, () => {
+      resolve();
+    });
+  });
+}
+
 // Validate required fields for the current operation
 function validateRequiredFields() {
   const mode = getCurrentMode();
@@ -2398,7 +2416,7 @@ function clearAllInputs() {
   });
 }
 
-function updateNavigationForMode(mode) {
+async function updateNavigationForMode(mode) {
   const localNav = document.getElementById('localModeNavigation');
   const mcpNav = document.getElementById('mcpModeNavigation');
   const sendButton = document.getElementById('send');
@@ -2408,12 +2426,48 @@ function updateNavigationForMode(mode) {
     mcpNav.style.display = 'none';
     showCategoriesView();
   } else {
-    localNav.style.display = 'none';
-    mcpNav.style.display = 'block';
-    // Clear local navigation state
-    currentView = 'categories';
-    currentCategory = null;
-    currentOperation = null;
+    // MCP mode: Keep showing local navigation, but operations will run against MCP server
+    localNav.style.display = 'block';
+    mcpNav.style.display = 'none';
+    // Don't change the view - keep whatever view is currently shown
+    // Operations will be executed against MCP server when run
+
+    // Check if MCP server is configured
+    const mcpServerUrl = await getMcpServerUrl();
+    if (!mcpServerUrl) {
+      // Show MCP configuration message in the output area
+      const output = document.getElementById("output");
+      output.innerHTML = `
+        <div class="card" style="background: #fff3cd; border-color: #ffc107;">
+          <div class="card-header" style="color: #856404;">⚠️ MCP Server Not Configured</div>
+          <div class="card-content" style="color: #856404; margin-top: 12px;">
+            <p style="margin-bottom: 12px;">Please configure your MCP server URL before using MCP mode.</p>
+            <div class="form-group" style="margin-top: 16px;">
+              <label>MCP Server URL <span class="required">*</span></label>
+              <input type="text" id="mcpServerUrlInput" placeholder="http://localhost:8082" style="margin-bottom: 8px;" />
+              <button class="btn-small btn-primary" id="saveMcpServerBtnInline" style="width: 100%;">Save MCP Server URL</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Setup save button handler
+      const saveBtn = document.getElementById('saveMcpServerBtnInline');
+      const urlInput = document.getElementById('mcpServerUrlInput');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          const url = urlInput.value.trim();
+          if (!url) {
+            alert('Please enter a valid MCP server URL');
+            return;
+          }
+          await saveMcpServerUrl(url);
+          // Refresh the view
+          updateNavigationForMode('mcp');
+        });
+      }
+    }
+
     // Show button for MCP mode (it will be enabled/disabled based on operation selection)
     if (sendButton) {
       sendButton.style.display = 'block';
@@ -2451,6 +2505,50 @@ async function initializeModeRadio() {
       updateNavigationForMode('mcp');
     }
   });
+
+  // Setup MCP server configuration UI handlers
+  const saveMcpServerBtn = document.getElementById('saveMcpServerBtn');
+  const mcpServerUrlInput = document.getElementById('mcpServerUrl');
+  if (saveMcpServerBtn && mcpServerUrlInput) {
+    saveMcpServerBtn.addEventListener('click', async () => {
+      const url = mcpServerUrlInput.value.trim();
+      if (!url) {
+        alert('Please enter a valid MCP server URL');
+        return;
+      }
+      await saveMcpServerUrl(url);
+      // Refresh MCP mode view
+      const currentMode = getCurrentMode();
+      if (currentMode === 'mcp') {
+        updateNavigationForMode('mcp');
+      }
+    });
+  }
+
+  // Check MCP server configuration on load
+  checkMcpServerConfiguration();
+}
+
+// Check MCP server configuration and update UI accordingly
+async function checkMcpServerConfiguration() {
+  const mcpServerUrl = await getMcpServerUrl();
+  const mcpServerNotConfigured = document.getElementById('mcpServerNotConfigured');
+  const mcpOperationsUI = document.getElementById('mcpOperationsUI');
+
+  if (mcpServerNotConfigured && mcpOperationsUI) {
+    if (!mcpServerUrl) {
+      mcpServerNotConfigured.style.display = 'block';
+      mcpOperationsUI.style.display = 'none';
+    } else {
+      mcpServerNotConfigured.style.display = 'none';
+      mcpOperationsUI.style.display = 'block';
+      // Pre-fill the URL input if it exists
+      const urlInput = document.getElementById('mcpServerUrl');
+      if (urlInput) {
+        urlInput.value = mcpServerUrl;
+      }
+    }
+  }
 
   // Setup category card click handlers
   const categoryCards = document.querySelectorAll('.category-card');
@@ -3093,8 +3191,21 @@ async function executeQuery() {
       operationSelect.value = op;
     }
   } else {
-    // In MCP mode, use the select dropdown
-    op = document.getElementById("operation").value;
+    // In MCP mode, check if server is configured first
+    const mcpServerUrl = await getMcpServerUrl();
+    if (!mcpServerUrl) {
+      showError("MCP server is not configured. Please configure it first.");
+      // Refresh the view to show configuration UI
+      updateNavigationForMode('mcp');
+      return;
+    }
+    // In MCP mode, use currentOperation from navigation state (same as local mode)
+    op = currentOperation;
+    // Also update the hidden select for compatibility
+    const operationSelect = document.getElementById("operation");
+    if (operationSelect) {
+      operationSelect.value = op;
+    }
   }
 
   // Prevent action if no operation is selected
@@ -3349,6 +3460,15 @@ async function executeQuery() {
         }
       } else {
         // Send to MCP (existing MCP operations only)
+        // First check if MCP server is configured
+        const mcpServerUrl = await getMcpServerUrl();
+        if (!mcpServerUrl) {
+          showError("MCP server is not configured. Please configure it first.");
+          // Refresh the view to show configuration UI
+          updateNavigationForMode('mcp');
+          return;
+        }
+
         const payload = {
           operation: op
         };
@@ -3379,7 +3499,7 @@ async function executeQuery() {
           payload.radius_minutes = getNumberInput("radius", 30);
         }
 
-        const res = await fetch("http://localhost:8082/mcp", {
+        const res = await fetch(`${mcpServerUrl}/mcp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
