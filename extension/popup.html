@@ -609,25 +609,28 @@
     .navigation-header {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
       margin-bottom: 20px;
       padding-bottom: 16px;
       border-bottom: 2px solid #f0f0f0;
+      position: relative;
     }
 
     .back-button {
-      padding: 8px 16px;
+      padding: 6px 12px;
       background: #f8f9fa;
       border: 2px solid #e9ecef;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 600;
       color: #495057;
       cursor: pointer;
       transition: all 0.2s;
       display: flex;
       align-items: center;
-      gap: 4px;
+      justify-content: center;
+      min-width: 36px;
+      height: 36px;
     }
 
     .back-button:hover {
@@ -684,6 +687,144 @@
     .operation-icon {
       font-size: 18px;
     }
+
+    /* Category Navigation Links */
+    .category-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 0;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #e9ecef;
+      font-size: 13px;
+    }
+
+    .category-nav-link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .category-nav-link:hover {
+      color: #764ba2;
+      text-decoration: underline;
+    }
+
+    .category-nav-link.active {
+      color: #495057;
+      font-weight: 600;
+      cursor: default;
+      text-decoration: none;
+    }
+
+    .category-nav-separator {
+      color: #adb5bd;
+    }
+
+    /* Settings View */
+    .settings-view {
+      display: none;
+    }
+
+    .settings-view.visible {
+      display: block;
+    }
+
+    .category-item {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .category-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .category-item-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #212529;
+    }
+
+    .category-item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 6px;
+      border: 1px solid #e9ecef;
+      background: #f8f9fa;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-small:hover {
+      background: #e9ecef;
+      border-color: #667eea;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .domain-list {
+      margin-top: 12px;
+    }
+
+    .domain-tag {
+      display: inline-block;
+      background: #f8f9fa;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin: 4px 4px 4px 0;
+      border: 1px solid #e9ecef;
+    }
+
+    .domain-tag .remove {
+      margin-left: 6px;
+      cursor: pointer;
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .add-domain-input {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .add-domain-input input {
+      flex: 1;
+      padding: 6px 10px;
+      border: 2px solid #e9ecef;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .add-category-section {
+      background: white;
+      border: 2px dashed #e9ecef;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
   </style>
 </head>
 
@@ -710,6 +851,17 @@
 
     <!-- Local Mode: Category-based Navigation -->
     <div id="localModeNavigation" style="display: none;">
+      <!-- Category Navigation Links -->
+      <div class="category-nav-links" id="categoryNavLinks">
+        <a href="#" class="category-nav-link" data-category="history">History Operations</a>
+        <span class="category-nav-separator">|</span>
+        <a href="#" class="category-nav-link" data-category="stats">Stats</a>
+        <span class="category-nav-separator">|</span>
+        <a href="#" class="category-nav-link" data-category="trends">Trends</a>
+        <span class="category-nav-separator">|</span>
+        <a href="#" class="category-nav-link" data-category="settings" id="settingsLink">⚙️ Settings</a>
+      </div>
+
       <!-- Categories View -->
       <div id="categoriesView" class="navigation-view">
         <div class="categories-grid">
@@ -718,15 +870,15 @@
             <div class="category-title">History Operations</div>
             <div class="category-subtitle">Tracing the path you've taken</div>
           </div>
-          <div class="category-card" data-category="trends">
-            <div class="category-icon">📈</div>
-            <div class="category-title">Trends</div>
-            <div class="category-subtitle">Patterns that emerge over time</div>
-          </div>
           <div class="category-card" data-category="stats">
             <div class="category-icon">📊</div>
             <div class="category-title">Stats</div>
             <div class="category-subtitle">Quantifying your browsing behavior</div>
+          </div>
+          <div class="category-card" data-category="trends">
+            <div class="category-icon">📈</div>
+            <div class="category-title">Trends</div>
+            <div class="category-subtitle">Patterns that emerge over time</div>
           </div>
         </div>
       </div>
@@ -734,8 +886,8 @@
       <!-- Operations View -->
       <div id="operationsView" class="navigation-view" style="display: none;">
         <div class="navigation-header">
-          <button class="back-button" id="backToCategories">← Back</button>
           <div class="view-title" id="operationsViewTitle"></div>
+          <button class="back-button" id="backToCategories">←</button>
         </div>
         <div class="operations-list" id="operationsList"></div>
       </div>
@@ -743,10 +895,32 @@
       <!-- Operation Form View -->
       <div id="operationFormView" class="navigation-view" style="display: none;">
         <div class="navigation-header">
-          <button class="back-button" id="backToOperations">← Back</button>
           <div class="view-title" id="operationFormViewTitle"></div>
+          <button class="back-button" id="backToOperations">←</button>
         </div>
+        <div id="operationFormViewHelp" class="operation-help" style="margin-bottom: 16px; color: #6c757d; font-size: 13px; line-height: 1.5;"></div>
         <div id="operationFormContainer"></div>
+      </div>
+
+      <!-- Settings View -->
+      <div id="settingsView" class="navigation-view settings-view" style="display: none;">
+        <div class="navigation-header">
+          <div class="view-title">Category Settings</div>
+          <button class="back-button" id="backFromSettings">←</button>
+        </div>
+        <div id="settingsContainer">
+          <div style="margin-bottom: 20px; color: #6c757d; font-size: 13px;">
+            Manage your custom website categories. Add categories and assign domains to them.
+          </div>
+          <div id="categoriesList"></div>
+          <div class="add-category-section">
+            <div style="font-weight: 600; margin-bottom: 12px;">Add New Category</div>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <input type="text" id="newCategoryName" placeholder="Category name (e.g., Social Media)" style="flex: 1; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px;" />
+              <button class="btn-small btn-primary" id="addCategoryBtn">Add Category</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -878,6 +1052,10 @@
 
     <div class="section" data-operation="before_after_navigation">
       <div class="form-group">
+        <label>Anchor domain <span class="required">*</span></label>
+        <input id="anchor_domain" type="text" placeholder="youtube.com" />
+      </div>
+      <div class="form-group">
         <a href="#" class="date-range-toggle" data-operation="before_after_navigation">📅 Set custom date range</a>
       </div>
       <div class="date-range-fields" data-operation="before_after_navigation" style="display: none;">
@@ -891,10 +1069,6 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Anchor domain <span class="required">*</span></label>
-        <input id="anchor_domain" type="text" placeholder="youtube.com" />
-      </div>
-      <div class="form-group">
         <label>Direction <span class="optional">(optional, default: after)</span></label>
         <select id="direction">
           <option value="after">After</option>
@@ -905,8 +1079,17 @@
 
     <div class="section" data-operation="daily_summary">
       <div class="form-group">
-        <label>Days <span class="optional">(optional, default: 1)</span></label>
-        <input id="days" type="number" value="1" min="1" />
+        <a href="#" class="date-range-toggle" data-operation="daily_summary">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="daily_summary" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
       </div>
     </div>
 
@@ -1079,12 +1262,16 @@
         <input id="anchor" type="text" placeholder="etsy.com" />
       </div>
       <div class="form-group">
+        <label>Date & Time <span class="optional">(optional, finds nearest anchor visit to this time)</span></label>
+        <input id="anchor_datetime" type="datetime-local" />
+      </div>
+      <div class="form-group">
         <label>Radius (minutes) <span class="optional">(optional, default: 30)</span></label>
         <input id="radius" type="number" value="30" min="1" />
       </div>
     </div>
 
-    <button id="send" disabled style="display: none;">📥 Fetch</button>
+    <button id="send" disabled style="display: none;">Fetch</button>
 
     <div id="output"></div>
   </div>

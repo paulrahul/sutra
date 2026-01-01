@@ -1,26 +1,39 @@
-// Category structure for local mode navigation
+// System categories with predefined domains
+const SYSTEM_CATEGORIES = {
+  'Social Media': [
+    'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'linkedin.com',
+    'reddit.com', 'tiktok.com', 'youtube.com', 'pinterest.com', 'snapchat.com'
+  ],
+  'News': [
+    'cnn.com', 'bbc.com', 'nytimes.com', 'theguardian.com', 'reuters.com',
+    'wsj.com', 'npr.org'
+  ],
+  'Shopping': [
+    'amazon.com', 'ebay.com', 'etsy.com', 'shopify.com', 'target.com', 'walmart.com'
+  ],
+  'Productivity': [
+    'github.com', 'stackoverflow.com', 'google.com', 'docs.google.com',
+    'drive.google.com', 'notion.so', 'trello.com', 'slack.com', 'zoom.us'
+  ],
+  'Entertainment': [
+    'netflix.com', 'hulu.com', 'disney.com', 'spotify.com', 'twitch.tv'
+  ],
+  'Education': [
+    'coursera.org', 'edx.org', 'khanacademy.org', 'udemy.com'
+  ]
+};
+
+// Category structure for local mode navigation (Stats before Trends)
 const OPERATION_CATEGORIES = {
   history: {
-    title: 'History Operations',
-    subtitle: 'Tracing the path you\'ve taken',
+    title: 'Navigation & History',
+    subtitle: 'Tracing the browsing paths you\'ve taken',
     operations: [
       {
-        id: 'history_search',
-        name: 'History search',
-        icon: '🔍',
-        help: 'Search through browsing history using keywords or partial matches.'
-      },
-      {
-        id: 'export_data',
-        name: 'Export data',
-        icon: '📥',
-        help: 'Export browsing history data for external use.'
-      },
-      {
-        id: 'sessions',
-        name: 'Sessions',
-        icon: '📅',
-        help: 'Group browsing activity into sessions based on time gaps.'
+        id: 'neighbor_visits',
+        name: 'Neighbor visits',
+        icon: '🔗',
+        help: 'Show pages visited near the same time as a given page.'
       },
       {
         id: 'before_after_navigation',
@@ -29,70 +42,10 @@ const OPERATION_CATEGORIES = {
         help: 'Show pages visited before or after a specific page.'
       },
       {
-        id: 'neighbor_visits',
-        name: 'Neighbor visits',
-        icon: '🔗',
-        help: 'Show pages visited near the same time as a given page.'
-      }
-    ]
-  },
-  trends: {
-    title: 'Trends',
-    subtitle: 'Patterns that emerge over time',
-    operations: [
-      {
-        id: 'navigation_paths',
-        name: 'Most common navigation paths',
-        icon: '🛤️',
-        help: 'Identify commonly repeated navigation paths.'
-      },
-      {
-        id: 'repeated_patterns',
-        name: 'Repeated patterns',
-        icon: '🔄',
-        help: 'Detect recurring browsing sequences or behaviors.'
-      },
-      {
-        id: 'daily_summary',
-        name: 'Daily browsing summary',
-        icon: '📊',
-        help: 'Summarize browsing activity for a given day.'
-      },
-      {
-        id: 'new_vs_familiar',
-        name: 'New vs familiar sites',
-        icon: '🆕',
-        help: 'Distinguish between newly visited and frequently visited sites.'
-      },
-      {
-        id: 'repeated_daily_habits',
-        name: 'Repeated daily habits',
+        id: 'sessions',
+        name: 'Sessions',
         icon: '📅',
-        help: 'Identify behaviors that repeat daily or regularly.'
-      },
-      {
-        id: 'emerging_interests',
-        name: 'Emerging interests',
-        icon: '📈',
-        help: 'Detect new or increasing areas of interest.'
-      },
-      {
-        id: 'category_tagging',
-        name: 'Category tagging',
-        icon: '🏷️',
-        help: 'Assign high-level categories to visited sites.'
-      },
-      {
-        id: 'category_inference',
-        name: 'Category inference',
-        icon: '🧠',
-        help: 'Infer categories based on browsing behavior and domains.'
-      },
-      {
-        id: 'productivity_vs_distraction',
-        name: 'Productivity vs distraction',
-        icon: '⚖️',
-        help: 'Classify browsing as productive or distracting.'
+        help: 'Group browsing activity into sessions based on time gaps.'
       }
     ]
   },
@@ -143,13 +96,121 @@ const OPERATION_CATEGORIES = {
         help: 'Timeline view of browsing activity.'
       }
     ]
+  },
+  trends: {
+    title: 'Trends',
+    subtitle: 'Patterns that emerge over time',
+    operations: [
+      {
+        id: 'navigation_paths',
+        name: 'Most common navigation paths',
+        icon: '🛤️',
+        help: 'Identify commonly repeated navigation paths.'
+      },
+      {
+        id: 'repeated_patterns',
+        name: 'Repeated patterns',
+        icon: '🔄',
+        help: 'Detect recurring browsing sequences or behaviors.'
+      },
+      {
+        id: 'daily_summary',
+        name: 'Daily browsing summary',
+        icon: '📊',
+        help: 'Summarize browsing activity for a given day.'
+      },
+      {
+        id: 'repeated_daily_habits',
+        name: 'Repeated daily habits',
+        icon: '📅',
+        help: 'Identify behaviors that repeat daily or regularly.'
+      },
+      {
+        id: 'emerging_interests',
+        name: 'Emerging interests',
+        icon: '📈',
+        help: 'Detect new or increasing areas of interest.'
+      },
+      {
+        id: 'category_inference',
+        name: 'Category inference',
+        icon: '🧠',
+        help: 'Infer categories based on browsing behavior and domains.'
+      },
+      {
+        id: 'productivity_vs_distraction',
+        name: 'Productivity vs distraction',
+        icon: '⚖️',
+        help: 'Classify browsing as productive or distracting.'
+      }
+    ]
   }
 };
 
 // Navigation state
-let currentView = 'categories'; // 'categories', 'operations', 'operationForm'
+let currentView = 'categories'; // 'categories', 'operations', 'operationForm', 'settings'
 let currentCategory = null;
 let currentOperation = null;
+
+// User-defined categories (loaded from storage)
+let userCategories = {};
+// System category overrides (user modifications to system categories)
+let systemCategoryOverrides = {};
+
+// Load user-defined categories from storage
+async function loadUserCategories() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['userCategories', 'systemCategoryOverrides'], (result) => {
+      userCategories = result.userCategories || {};
+      systemCategoryOverrides = result.systemCategoryOverrides || {};
+      resolve(userCategories);
+    });
+  });
+}
+
+// Save user-defined categories to storage
+function saveUserCategories() {
+  chrome.storage.local.set({ userCategories, systemCategoryOverrides });
+}
+
+// Get system category with user overrides applied
+function getSystemCategoryWithOverrides(categoryName) {
+  const baseDomains = [...(SYSTEM_CATEGORIES[categoryName] || [])];
+  const overrides = systemCategoryOverrides[categoryName] || {};
+  const added = overrides.added || [];
+  const removed = overrides.removed || [];
+
+  // Start with base domains, add user-added, remove user-removed
+  const domains = [...new Set([...baseDomains, ...added].filter(d => !removed.includes(d)))];
+  return domains;
+}
+
+// Update category mapping after loading user categories
+function updateCategoryMapping() {
+  // This will be called after userCategories is loaded
+}
+
+// Update category navigation links based on current category
+function updateCategoryNavLinks() {
+  const links = document.querySelectorAll('.category-nav-link[data-category]');
+  links.forEach(link => {
+    const categoryId = link.dataset.category;
+    if (categoryId === 'settings') {
+      // Settings link is always clickable (not active unless we're in settings)
+      if (currentView === 'settings') {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+      return;
+    }
+    if (categoryId === currentCategory) {
+      link.classList.add('active');
+    } else {
+      link.classList.remove('active');
+    }
+  });
+}
 
 // Utility functions
 function getDomain(url) {
@@ -195,73 +256,51 @@ function getUrlDisplayLabel(url) {
   }
 }
 
+// Get all categories (system + user, with user taking priority)
+function getAllCategories() {
+  // Merge system and user categories, user categories override system
+  const allCategories = { ...SYSTEM_CATEGORIES };
+  Object.keys(userCategories).forEach(catName => {
+    allCategories[catName] = [...(allCategories[catName] || []), ...userCategories[catName]];
+    // Remove duplicates
+    allCategories[catName] = [...new Set(allCategories[catName])];
+  });
+  return allCategories;
+}
+
 function getCategory(domain) {
   if (!domain) return 'Other';
 
-  const categoryMap = {
-    // Social Media
-    'facebook.com': 'Social Media',
-    'twitter.com': 'Social Media',
-    'x.com': 'Social Media',
-    'instagram.com': 'Social Media',
-    'linkedin.com': 'Social Media',
-    'reddit.com': 'Social Media',
-    'tiktok.com': 'Social Media',
-    'youtube.com': 'Social Media',
-    'pinterest.com': 'Social Media',
-    'snapchat.com': 'Social Media',
-
-    // News
-    'cnn.com': 'News',
-    'bbc.com': 'News',
-    'nytimes.com': 'News',
-    'theguardian.com': 'News',
-    'reuters.com': 'News',
-    'wsj.com': 'News',
-    'npr.org': 'News',
-
-    // Shopping
-    'amazon.com': 'Shopping',
-    'ebay.com': 'Shopping',
-    'etsy.com': 'Shopping',
-    'shopify.com': 'Shopping',
-    'target.com': 'Shopping',
-    'walmart.com': 'Shopping',
-
-    // Productivity
-    'github.com': 'Productivity',
-    'stackoverflow.com': 'Productivity',
-    'google.com': 'Productivity',
-    'docs.google.com': 'Productivity',
-    'drive.google.com': 'Productivity',
-    'notion.so': 'Productivity',
-    'trello.com': 'Productivity',
-    'slack.com': 'Productivity',
-    'zoom.us': 'Productivity',
-
-    // Entertainment
-    'netflix.com': 'Entertainment',
-    'hulu.com': 'Entertainment',
-    'disney.com': 'Entertainment',
-    'spotify.com': 'Entertainment',
-    'twitch.tv': 'Entertainment',
-
-    // Education
-    'coursera.org': 'Education',
-    'edx.org': 'Education',
-    'khanacademy.org': 'Education',
-    'udemy.com': 'Education',
-  };
-
-  // Check exact match first
-  if (categoryMap[domain]) {
-    return categoryMap[domain];
+  // First check user-defined categories (exact match first, then partial)
+  for (const [categoryName, domains] of Object.entries(userCategories)) {
+    if (domains && Array.isArray(domains)) {
+      // Check exact match first
+      if (domains.includes(domain)) {
+        return categoryName;
+      }
+      // Then check partial matches
+      for (const catDomain of domains) {
+        if (domain.includes(catDomain) || catDomain.includes(domain)) {
+          return categoryName;
+        }
+      }
+    }
   }
 
-  // Check partial matches
-  for (const [key, category] of Object.entries(categoryMap)) {
-    if (domain.includes(key.replace(/\./g, '.'))) {
-      return category;
+  // Then check system categories (with user overrides applied)
+  for (const categoryName of Object.keys(SYSTEM_CATEGORIES)) {
+    const domains = getSystemCategoryWithOverrides(categoryName);
+    if (domains && Array.isArray(domains)) {
+      // Check exact match first
+      if (domains.includes(domain)) {
+        return categoryName;
+      }
+      // Then check partial matches
+      for (const catDomain of domains) {
+        if (domain.includes(catDomain) || catDomain.includes(domain)) {
+          return categoryName;
+        }
+      }
     }
   }
 
@@ -430,7 +469,7 @@ function runLocalBeforeAfterNavigation(data, anchorDomain, direction = 'after') 
   });
 
   if (anchorVisits.length === 0) {
-    return { error: "ANCHOR_NOT_FOUND" };
+    return { error: "ANCHOR_NOT_FOUND", anchorDomain: anchorDomain };
   }
 
   const navigationDomains = new Set();
@@ -506,16 +545,24 @@ function runLocalBeforeAfterNavigation(data, anchorDomain, direction = 'after') 
   };
 }
 
-function runLocalDailySummary(data, days = 1) {
-  const now = new Date();
-  const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-
+function runLocalDailySummary(data, startDate = null, endDate = null) {
   const dailyData = {};
+
+  // Convert date strings to date keys (YYYY-MM-DD format) for comparison
+  const startDateKey = startDate || null;
+  const endDateKey = endDate || null;
+
   data.forEach(v => {
     const visitDate = new Date(v.visited_at);
-    if (visitDate < startDate) return;
+    // Extract date in local timezone, not UTC, to avoid timezone issues
+    const year = visitDate.getFullYear();
+    const month = String(visitDate.getMonth() + 1).padStart(2, '0');
+    const day = String(visitDate.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
 
-    const dateKey = visitDate.toISOString().split('T')[0];
+    // If date range is specified, only process dates within range (compare date keys, not datetime)
+    if (startDateKey && dateKey < startDateKey) return;
+    if (endDateKey && dateKey > endDateKey) return;
     if (!dailyData[dateKey]) {
       dailyData[dateKey] = {
         date: dateKey,
@@ -539,18 +586,20 @@ function runLocalDailySummary(data, days = 1) {
     }
   });
 
-  return Object.values(dailyData).map(day => ({
-    date: day.date,
-    total_visits: day.total_visits,
-    unique_domains: day.unique_domains.size,
-    top_domains: Object.entries(day.top_domains)
-      .map(([domain, count]) => ({ domain, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5),
-    categories: Object.entries(day.categories)
-      .map(([category, count]) => ({ category, count }))
-      .sort((a, b) => b.count - a.count)
-  }));
+  return Object.values(dailyData)
+    .map(day => ({
+      date: day.date,
+      total_visits: day.total_visits,
+      unique_domains: day.unique_domains.size,
+      top_domains: Object.entries(day.top_domains)
+        .map(([domain, count]) => ({ domain, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5),
+      categories: Object.entries(day.categories)
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => b.count - a.count)
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date)); // Sort by date descending (newest first)
 }
 
 function runLocalNewVsFamiliar(data, days = 7) {
@@ -683,6 +732,16 @@ function runLocalExportData(data, format = 'json') {
   return data;
 }
 
+// Extract base domain (remove subdomains like old.reddit.com -> reddit.com)
+function getBaseDomain(domain) {
+  if (!domain) return null;
+  const parts = domain.split('.');
+  // If domain has 2 or fewer parts, return as is
+  if (parts.length <= 2) return domain;
+  // Otherwise, return last 2 parts (e.g., old.reddit.com -> reddit.com)
+  return parts.slice(-2).join('.');
+}
+
 function runLocalNavigationPaths(data, limit = 10) {
   const sorted = [...data].sort((a, b) =>
     new Date(a.visited_at) - new Date(b.visited_at)
@@ -690,8 +749,12 @@ function runLocalNavigationPaths(data, limit = 10) {
 
   const pathCounts = {};
   for (let i = 0; i < sorted.length - 1; i++) {
-    const from = getDomain(sorted[i].url);
-    const to = getDomain(sorted[i + 1].url);
+    const fromDomain = getDomain(sorted[i].url);
+    const toDomain = getDomain(sorted[i + 1].url);
+
+    // Get base domains (without subdomains)
+    const from = getBaseDomain(fromDomain);
+    const to = getBaseDomain(toDomain);
 
     if (from && to && from !== to) {
       const pathKey = `${from} -> ${to}`;
@@ -1023,14 +1086,29 @@ function runLocalBrowserUsageTimeline(data, hours = 24) {
   };
 }
 
-function runLocalNeighborVisits(data, anchor, radiusMinutes) {
-  const anchorMatches = data.filter(v => v.url.includes(anchor));
+function runLocalNeighborVisits(data, anchor, radiusMinutes, anchorDateTime = null) {
+  let anchorMatches = data.filter(v => v.url.includes(anchor));
 
   if (anchorMatches.length === 0) {
-    return { error: "ANCHOR_NOT_FOUND" };
+    return { error: "ANCHOR_NOT_FOUND", anchorUrl: anchor };
   }
 
-  const anchorVisit = anchorMatches[0];
+  // If datetime is provided, find the nearest anchor visit to that time
+  let anchorVisit;
+  if (anchorDateTime) {
+    const targetTime = new Date(anchorDateTime);
+    // Find the anchor visit closest to the specified datetime
+    anchorVisit = anchorMatches.reduce((closest, current) => {
+      const currentTime = new Date(current.visited_at);
+      const closestTime = new Date(closest.visited_at);
+      const currentDiff = Math.abs(currentTime - targetTime);
+      const closestDiff = Math.abs(closestTime - targetTime);
+      return currentDiff < closestDiff ? current : closest;
+    });
+  } else {
+    anchorVisit = anchorMatches[0];
+  }
+
   const anchorDomain = getDomain(anchorVisit.url);
   const anchorTime = new Date(anchorVisit.visited_at);
   const start = new Date(anchorTime.getTime() - radiusMinutes * 60 * 1000);
@@ -1073,9 +1151,47 @@ function showLoading() {
   `;
 }
 
-function showError(message) {
+// Convert error codes to human-readable messages
+function getHumanReadableError(error, context = {}) {
+  if (typeof error !== 'string') {
+    return 'An unexpected error occurred. Please try again.';
+  }
+
+  const errorMessages = {
+    'ANCHOR_NOT_FOUND': context.anchorDomain
+      ? `The domain "${context.anchorDomain}" was not found in your browsing history. Please check the spelling and try again.`
+      : context.anchorUrl
+      ? `The URL containing "${context.anchorUrl}" was not found in your browsing history. Please check the spelling and try again.`
+      : 'The specified anchor was not found in your browsing history. Please check your input and try again.',
+    'UNKNOWN_OPERATION': 'An unknown operation was requested. Please try selecting a different operation.',
+    'INVALID_DATE': context.date
+      ? `The date "${context.date}" is not valid or has no browsing history data. Please select a different date.`
+      : 'The selected date is not valid. Please try again.',
+    'MISSING_REQUIRED_FIELD': context.field
+      ? `The field "${context.field}" is required. Please fill it in and try again.`
+      : 'A required field is missing. Please fill in all required fields and try again.',
+    'NO_DATA_AVAILABLE': 'No browsing history data is available for the selected time period. Please try a different date range.',
+    'INVALID_INPUT': context.field
+      ? `The input for "${context.field}" is not valid. Please check your input and try again.`
+      : 'The provided input is not valid. Please check your input and try again.'
+  };
+
+  // If it's a known error code, return the human-readable message
+  if (errorMessages[error]) {
+    return errorMessages[error];
+  }
+
+  // If it's already a human-readable message (doesn't match any error code), return as-is
+  // Otherwise, return a generic error message
+  return error.includes('_') && error === error.toUpperCase()
+    ? 'An error occurred while processing your request. Please try again.'
+    : error;
+}
+
+function showError(message, context = {}) {
   const output = document.getElementById("output");
-  output.innerHTML = `<div class="error">${message}</div>`;
+  const humanReadableMessage = getHumanReadableError(message, context);
+  output.innerHTML = `<div class="error">${humanReadableMessage}</div>`;
 }
 
 // Create SVG line/area chart for time distributions
@@ -1172,7 +1288,7 @@ function renderTopLinks(data, timeRangeInfo = null) {
   const maxCount = Math.max(...data.map(item => item.visit_count || 0));
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🔗 Top Visited Links ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Top Visited Links ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="bar-chart">';
 
   data.forEach((item, index) => {
@@ -1188,7 +1304,6 @@ function renderTopLinks(data, timeRangeInfo = null) {
         <div class="bar-container">
           <div class="bar-fill" style="width: ${percentage}%">${item.visit_count}</div>
         </div>
-        <div class="bar-value">${item.visit_count}</div>
       </div>
     `;
   });
@@ -1205,7 +1320,7 @@ function renderTopDomains(data, timeRangeInfo = null) {
   const maxCount = Math.max(...data.map(item => item.visit_count || 0));
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🌐 Top Domains ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Top Domains ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="bar-chart">';
 
   data.forEach((item, index) => {
@@ -1220,7 +1335,6 @@ function renderTopDomains(data, timeRangeInfo = null) {
         <div class="bar-container">
           <div class="bar-fill" style="width: ${percentage}%">${item.visit_count}</div>
         </div>
-        <div class="bar-value">${item.visit_count}</div>
       </div>
     `;
   });
@@ -1235,7 +1349,7 @@ function renderVisitsByTimeOfDay(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">⏰ Visits by Time of Day ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Visits by Time of Day ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   // Create chart data for each time slot
   const chartData = data.map(slot => {
@@ -1278,7 +1392,7 @@ function renderSessions(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">📅 Browsing Sessions ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Browsing Sessions ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   data.slice(0, 10).forEach((session, index) => {
     const start = new Date(session.start);
@@ -1306,10 +1420,11 @@ function renderDailySummary(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
+  html += '<div class="card"><div class="card-header">Daily Browsing Summary ' + formatTimeRangeForHeader(timeRangeInfo) + '</div><div style="padding: 16px;">';
 
   data.forEach(day => {
-    html += '<div class="card">';
-    html += `<div class="card-header">📊 ${day.date}</div>`;
+    html += '<div class="card" style="margin-bottom: 16px;">';
+    html += `<div class="card-header">${day.date}</div>`;
     html += '<div class="stats-grid">';
     html += `<div class="stat-card"><div class="stat-value">${day.total_visits}</div><div class="stat-label">Total Visits</div></div>`;
     html += `<div class="stat-card"><div class="stat-value">${day.unique_domains}</div><div class="stat-label">Unique Domains</div></div>`;
@@ -1327,7 +1442,6 @@ function renderDailySummary(data, timeRangeInfo = null) {
             <div class="bar-container">
               <div class="bar-fill" style="width: ${percentage}%">${domain.count}</div>
             </div>
-            <div class="bar-value">${domain.count}</div>
           </div>
         `;
       });
@@ -1337,7 +1451,7 @@ function renderDailySummary(data, timeRangeInfo = null) {
     html += '</div>';
   });
 
-  html += '</div>';
+  html += '</div></div></div>';
   return html;
 }
 
@@ -1347,7 +1461,7 @@ function renderCategoryTagging(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🏷️ Category Tagging ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Category Tagging ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
 
@@ -1377,7 +1491,7 @@ function renderCategoryTagging(data, timeRangeInfo = null) {
 
 function renderProductivityVsDistraction(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">⚖️ Productivity vs Distraction ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Productivity vs Distraction ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="stats-grid">';
   html += `<div class="stat-card" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);">
     <div class="stat-value">${data.productive.count}</div>
@@ -1413,7 +1527,7 @@ function renderHistorySearch(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🔍 Search Results: "' + data.query + '" ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Search Results: "' + data.query + '" ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += `<div style="margin-bottom: 12px; color: #6c757d;">Found ${data.match_count} matches</div>`;
 
   data.matches.forEach(match => {
@@ -1438,7 +1552,7 @@ function renderNavigationPaths(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🛤️ Most Common Navigation Paths ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Most Common Navigation Paths ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   const maxCount = Math.max(...data.most_common_paths.map(p => p.count || 0));
 
@@ -1454,7 +1568,6 @@ function renderNavigationPaths(data, timeRangeInfo = null) {
         <div class="bar-container" style="width: 150px;">
           <div class="bar-fill" style="width: ${percentage}%">${path.count}</div>
         </div>
-        <div class="bar-value">${path.count}</div>
       </div>
     `;
   });
@@ -1465,7 +1578,7 @@ function renderNavigationPaths(data, timeRangeInfo = null) {
 
 function renderNewVsFamiliar(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🆕 New vs Familiar Sites ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">New vs Familiar Sites ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="stats-grid">';
   html += `<div class="stat-card"><div class="stat-value">${data.new_site_count}</div><div class="stat-label">New Sites</div></div>`;
   html += `<div class="stat-card"><div class="stat-value">${data.familiar_site_count}</div><div class="stat-label">Familiar Sites</div></div>`;
@@ -1484,11 +1597,16 @@ function renderNewVsFamiliar(data, timeRangeInfo = null) {
 
 function renderBeforeAfterNavigation(data, timeRangeInfo = null) {
   if (data.error) {
-    return `<div class="error">Anchor domain "${data.anchor_domain}" not found in history</div>`;
+    const context = {
+      anchorDomain: data.anchor_domain,
+      anchorUrl: data.anchor_url
+    };
+    const errorMessage = getHumanReadableError(data.error, context);
+    return `<div class="error">${errorMessage}</div>`;
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🧭 Navigation ' + (data.direction === 'after' ? 'After' : 'Before') + ' ' + data.anchor_domain + ' ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Navigation ' + (data.direction === 'after' ? 'After' : 'Before') + ' ' + data.anchor_domain + ' ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   if (data.most_common && data.most_common.length > 0) {
     const maxCount = Math.max(...data.most_common.map(d => d.count || 0));
@@ -1501,7 +1619,6 @@ function renderBeforeAfterNavigation(data, timeRangeInfo = null) {
           <div class="bar-container">
             <div class="bar-fill" style="width: ${percentage}%">${item.count}</div>
           </div>
-          <div class="bar-value">${item.count}</div>
         </div>
       `;
     });
@@ -1514,12 +1631,27 @@ function renderBeforeAfterNavigation(data, timeRangeInfo = null) {
 
 function renderNeighborVisits(data, timeRangeInfo = null) {
   if (data.error) {
-    return `<div class="error">Anchor URL not found in history</div>`;
+    const context = {
+      anchorDomain: data.anchor_domain,
+      anchorUrl: data.anchor_url || (data.anchor ? data.anchor.url_contains : null)
+    };
+    const errorMessage = getHumanReadableError(data.error, context);
+    return `<div class="error">${errorMessage}</div>`;
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🔗 Neighbor Visits ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
-  html += `<div style="margin-bottom: 12px; color: #6c757d;">Around ${data.anchor_domain} at ${new Date(data.anchor_time).toLocaleString()}</div>`;
+  html += '<div class="card"><div class="card-header">Neighbor Visits ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  // Format date as DD-MMM-YYYY, HH:MM:SS
+  const anchorDate = new Date(data.anchor_time);
+  const day = String(anchorDate.getDate()).padStart(2, '0');
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = monthNames[anchorDate.getMonth()];
+  const year = anchorDate.getFullYear();
+  const hours = String(anchorDate.getHours()).padStart(2, '0');
+  const minutes = String(anchorDate.getMinutes()).padStart(2, '0');
+  const seconds = String(anchorDate.getSeconds()).padStart(2, '0');
+  const formattedDate = `${day}-${month}-${year}, ${hours}:${minutes}:${seconds}`;
+  html += `<div style="margin-bottom: 12px; color: #6c757d;">Around ${data.anchor_domain} on ${formattedDate}</div>`;
 
   if (data.domain_counts && data.domain_counts.length > 0) {
     const maxCount = Math.max(...data.domain_counts.map(d => d.count || 0));
@@ -1532,7 +1664,6 @@ function renderNeighborVisits(data, timeRangeInfo = null) {
           <div class="bar-container">
             <div class="bar-fill" style="width: ${percentage}%">${item.count}</div>
           </div>
-          <div class="bar-value">${item.count}</div>
         </div>
       `;
     });
@@ -1549,7 +1680,7 @@ function renderCategoryInference(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🏷️ Category Inference ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Category Inference ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
 
@@ -1577,7 +1708,7 @@ function renderCategoryInference(data, timeRangeInfo = null) {
 
 function renderRepeatedPatterns(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🔄 Repeated Patterns ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Repeated Patterns ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   if (data.by_hour && data.by_hour.length > 0) {
     // Sort by hour
@@ -1647,7 +1778,7 @@ function renderRepeatedDailyHabits(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">📅 Repeated Daily Habits ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Repeated Daily Habits ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   data.daily_habits.forEach(habit => {
     html += `
@@ -1671,7 +1802,7 @@ function renderEmergingInterests(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">📈 Emerging Interests ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Emerging Interests ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   data.emerging_interests.forEach(interest => {
     html += `
@@ -1695,7 +1826,7 @@ function renderBrowserUsageTimeline(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">⏱️ Browser Usage Timeline ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Browser Usage Timeline ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   if (data.hourly_summary && data.hourly_summary.length > 0) {
     // Create chart data
@@ -1741,7 +1872,7 @@ function renderDomainTimeDistribution(data, timeRangeInfo = null) {
   data.forEach((domainData, index) => {
     html += '<div class="card">';
     const timeRangeHeader = index === 0 ? ' ' + formatTimeRangeForHeader(timeRangeInfo) : '';
-    html += `<div class="card-header">⏰ ${domainData.domain}${timeRangeHeader}</div>`;
+    html += `<div class="card-header">${domainData.domain}${timeRangeHeader}</div>`;
     html += `<div style="margin-bottom: 12px; color: #6c757d;">Peak hour: ${domainData.peak_hour}:00</div>`;
 
     if (domainData.hourly_distribution && domainData.hourly_distribution.length > 0) {
@@ -1823,7 +1954,14 @@ function renderResult(operation, result, timeRangeInfo = null) {
   const output = document.getElementById("output");
 
   if (result.error) {
-    showError(result.error);
+    // Extract context from result for better error messages
+    const context = {
+      anchorDomain: result.anchor_domain,
+      anchorUrl: result.anchor_url || (result.anchor ? result.anchor.url_contains : null),
+      date: result.date,
+      field: result.field
+    };
+    showError(result.error, context);
     return;
   }
 
@@ -1990,6 +2128,9 @@ function showCategoriesView() {
   document.getElementById('categoriesView').style.display = 'block';
   document.getElementById('operationsView').style.display = 'none';
   document.getElementById('operationFormView').style.display = 'none';
+  document.getElementById('settingsView').style.display = 'none';
+
+  updateCategoryNavLinks();
 
   // Clear any operation selection
   const operationSelect = document.getElementById('operation');
@@ -1999,6 +2140,12 @@ function showCategoriesView() {
 
   // Clear all form inputs
   clearAllInputs();
+
+  // Clear output
+  const output = document.getElementById('output');
+  if (output) {
+    output.innerHTML = '';
+  }
 
   // Hide the send button
   const sendButton = document.getElementById('send');
@@ -2019,6 +2166,9 @@ function showOperationsView(categoryId) {
   document.getElementById('categoriesView').style.display = 'none';
   document.getElementById('operationsView').style.display = 'block';
   document.getElementById('operationFormView').style.display = 'none';
+  document.getElementById('settingsView').style.display = 'none';
+
+  updateCategoryNavLinks();
 
   // Update view title
   document.getElementById('operationsViewTitle').textContent = category.title;
@@ -2045,6 +2195,12 @@ function showOperationsView(categoryId) {
   // Clear all form inputs
   clearAllInputs();
 
+  // Clear output
+  const output = document.getElementById('output');
+  if (output) {
+    output.innerHTML = '';
+  }
+
   // Hide the send button
   const sendButton = document.getElementById('send');
   if (sendButton) {
@@ -2060,11 +2216,29 @@ function showOperationFormView(operationId) {
   document.getElementById('categoriesView').style.display = 'none';
   document.getElementById('operationsView').style.display = 'none';
   document.getElementById('operationFormView').style.display = 'block';
+  document.getElementById('settingsView').style.display = 'none';
 
-  // Update view title
+  // Clear output
+  const output = document.getElementById('output');
+  if (output) {
+    output.innerHTML = '';
+  }
+
+  updateCategoryNavLinks();
+
+  // Update view title and help text
   const category = OPERATION_CATEGORIES[currentCategory];
   const operation = category?.operations.find(op => op.id === operationId);
   document.getElementById('operationFormViewTitle').textContent = operation?.name || operationId;
+
+  // Show help text if available
+  const helpTextElement = document.getElementById('operationFormViewHelp');
+  if (helpTextElement && operation?.help) {
+    helpTextElement.textContent = operation.help;
+    helpTextElement.style.display = 'block';
+  } else if (helpTextElement) {
+    helpTextElement.style.display = 'none';
+  }
 
   // Set the operation select value (for compatibility with existing code)
   const operationSelect = document.getElementById('operation');
@@ -2092,6 +2266,9 @@ function showOperationFormView(operationId) {
     clonedSection.classList.add("visible");
     clonedSection.style.display = "flex";
 
+    // Set default values for cloned inputs
+    setDefaultValuesForClonedSection(clonedSection, operationId);
+
     formContainer.appendChild(clonedSection);
 
     // Re-setup date inputs and toggles for the cloned section
@@ -2099,6 +2276,10 @@ function showOperationFormView(operationId) {
       setupDateInputs();
       setupDateInputClickHandlers();
       setupDateRangeToggles();
+
+      // Set up validation listeners on cloned inputs
+      setupValidationListenersForClonedSection(clonedSection, operationId);
+
       validateRequiredFields();
     }, 0);
   }
@@ -2108,6 +2289,79 @@ function showOperationFormView(operationId) {
   if (sendButton) {
     sendButton.style.display = 'block';
   }
+}
+
+// Set default values for cloned section inputs
+function setDefaultValuesForClonedSection(clonedSection, operationId) {
+  // Set default values based on operation
+  const defaults = {
+    'limit': '10',
+    'session_gap': '30',
+    'radius': '30',
+    'days': operationId === 'repeated_daily_habits' ? '30' : '7',
+    'hours': '24'
+  };
+
+  // Set defaults for number inputs
+  Object.entries(defaults).forEach(([id, value]) => {
+    const input = clonedSection.querySelector(`#${id}`);
+    if (input && !input.value) {
+      input.value = value;
+    }
+  });
+
+  // Set default date values (today for date inputs, 7 days ago for start_date, today for end_date)
+  const today = new Date().toISOString().split('T')[0];
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  clonedSection.querySelectorAll('input[type="date"]').forEach(input => {
+    if (!input.value) {
+      if (input.id === 'start_date') {
+        input.value = sevenDaysAgo;
+      } else if (input.id === 'end_date') {
+        input.value = today;
+      } else if (input.id === 'date') {
+        input.value = today;
+      }
+    }
+  });
+}
+
+// Set up validation listeners for cloned inputs in local mode
+function setupValidationListenersForClonedSection(clonedSection, operationId) {
+  const requiredFields = {
+    "top_domains_by_day": ["date"],
+    "neighbor_visits": ["anchor"],
+    "before_after_navigation": ["anchor_domain"],
+    "history_search": ["search_query"]
+  };
+
+  const fieldsForOperation = requiredFields[operationId] || [];
+
+  fieldsForOperation.forEach(fieldId => {
+    const field = clonedSection.querySelector(`#${fieldId}`);
+    if (field) {
+      // Remove any existing listeners by cloning the field (this removes old listeners)
+      // Then add new listeners
+      field.addEventListener("input", validateRequiredFields);
+      field.addEventListener("change", validateRequiredFields);
+      field.addEventListener("blur", validateRequiredFields);
+    }
+  });
+
+  // Set up Enter key submission for all inputs in the cloned section
+  const inputs = clonedSection.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]');
+  inputs.forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const sendButton = document.getElementById("send");
+        if (sendButton && !sendButton.disabled) {
+          executeQuery();
+        }
+      }
+    });
+  });
 }
 
 function clearAllInputs() {
@@ -2207,6 +2461,20 @@ async function initializeModeRadio() {
     });
   });
 
+  // Setup category navigation link handlers
+  const categoryNavLinks = document.querySelectorAll('.category-nav-link[data-category]');
+  categoryNavLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const categoryId = link.dataset.category;
+      if (categoryId === 'settings') {
+        showSettingsView();
+      } else if (categoryId && categoryId !== currentCategory) {
+        showOperationsView(categoryId);
+      }
+    });
+  });
+
   // Setup back button handlers
   document.getElementById('backToCategories').addEventListener('click', () => {
     showCategoriesView();
@@ -2219,6 +2487,250 @@ async function initializeModeRadio() {
       showCategoriesView();
     }
   });
+
+  document.getElementById('backFromSettings').addEventListener('click', () => {
+    if (currentCategory) {
+      showOperationsView(currentCategory);
+    } else {
+      showCategoriesView();
+    }
+  });
+
+  // Load user categories and initialize settings
+  loadUserCategories().then(() => {
+    renderSettingsView();
+  });
+}
+
+// Show settings view
+function showSettingsView() {
+  currentView = 'settings';
+  currentCategory = null;
+  currentOperation = null;
+
+  document.getElementById('categoriesView').style.display = 'none';
+  document.getElementById('operationsView').style.display = 'none';
+  document.getElementById('operationFormView').style.display = 'none';
+  document.getElementById('settingsView').style.display = 'block';
+
+  updateCategoryNavLinks();
+  renderSettingsView();
+}
+
+// Render settings view with system and user categories
+function renderSettingsView() {
+  const categoriesList = document.getElementById('categoriesList');
+  categoriesList.innerHTML = '';
+
+  // First render system categories
+  Object.keys(SYSTEM_CATEGORIES).forEach(categoryName => {
+    const domains = getSystemCategoryWithOverrides(categoryName);
+    const isSystem = true;
+    renderCategoryItem(categoriesList, categoryName, domains, isSystem);
+  });
+
+  // Then render user-defined categories
+  Object.entries(userCategories).forEach(([categoryName, domains]) => {
+    const isSystem = false;
+    renderCategoryItem(categoriesList, categoryName, domains, isSystem);
+  });
+
+  if (Object.keys(SYSTEM_CATEGORIES).length === 0 && Object.keys(userCategories).length === 0) {
+    categoriesList.innerHTML = '<div style="color: #6c757d; font-size: 13px; padding: 20px; text-align: center;">No categories yet. Add one below!</div>';
+  }
+
+  // Setup handlers after rendering
+  setupCategoryItemHandlers();
+}
+
+// Render a single category item
+function renderCategoryItem(container, categoryName, domains, isSystem) {
+  const categoryItem = document.createElement('div');
+  categoryItem.className = 'category-item';
+  categoryItem.dataset.categoryName = categoryName;
+  categoryItem.dataset.isSystem = isSystem;
+
+  const domainList = Array.isArray(domains) ? domains : [];
+  const domainTags = domainList.map(domain => `
+    <span class="domain-tag">
+      ${domain}
+      <span class="remove" data-domain="${domain}">×</span>
+    </span>
+  `).join('');
+
+  const systemBadge = isSystem ? '<span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">System</span>' : '';
+
+  categoryItem.innerHTML = `
+    <div class="category-item-header">
+      <div class="category-item-name">${categoryName}${systemBadge}</div>
+      <div class="category-item-actions">
+        <button class="btn-small" onclick="editCategoryName('${categoryName}', ${isSystem})">Edit Name</button>
+        ${!isSystem ? `<button class="btn-small" onclick="deleteCategory('${categoryName}')">Delete</button>` : ''}
+      </div>
+    </div>
+    <div class="domain-list">
+      ${domainTags || '<span style="color: #6c757d; font-size: 12px;">No domains yet</span>'}
+    </div>
+    <div class="add-domain-input">
+      <input type="text" placeholder="Add domain (e.g., example.com)" data-category="${categoryName}" data-is-system="${isSystem}" />
+      <button class="btn-small btn-primary" onclick="addDomainToCategory('${categoryName}', this.previousElementSibling, ${isSystem})">Add Domain</button>
+    </div>
+  `;
+
+  container.appendChild(categoryItem);
+}
+
+// Setup handlers for category items
+function setupCategoryItemHandlers() {
+  const categoriesList = document.getElementById('categoriesList');
+
+  // Setup remove domain handlers
+  categoriesList.querySelectorAll('.domain-tag .remove').forEach(removeBtn => {
+    removeBtn.addEventListener('click', (e) => {
+      const domain = e.target.dataset.domain;
+      const categoryItem = e.target.closest('.category-item');
+      const categoryName = categoryItem.dataset.categoryName;
+      const isSystem = categoryItem.dataset.isSystem === 'true';
+      removeDomainFromCategory(categoryName, domain, isSystem);
+    });
+  });
+
+  // Setup add domain handlers (Enter key)
+  categoriesList.querySelectorAll('.add-domain-input input').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const categoryName = input.dataset.category;
+        const isSystem = input.dataset.isSystem === 'true';
+        const addBtn = input.nextElementSibling;
+        addDomainToCategory(categoryName, input, isSystem);
+      }
+    });
+  });
+}
+
+// Add domain to category
+function addDomainToCategory(categoryName, inputElement, isSystem = false) {
+  const domain = inputElement.value.trim();
+  if (!domain) return;
+
+  if (isSystem) {
+    // For system categories, track additions in overrides
+    if (!systemCategoryOverrides[categoryName]) {
+      systemCategoryOverrides[categoryName] = { added: [], removed: [] };
+    }
+    const currentDomains = getSystemCategoryWithOverrides(categoryName);
+    if (currentDomains.includes(domain)) {
+      alert('Domain already exists in this category');
+      inputElement.value = '';
+      return;
+    }
+    systemCategoryOverrides[categoryName].added.push(domain);
+    saveUserCategories();
+    renderSettingsView();
+  } else {
+    // For user categories
+    if (!userCategories[categoryName]) {
+      userCategories[categoryName] = [];
+    }
+    if (!userCategories[categoryName].includes(domain)) {
+      userCategories[categoryName].push(domain);
+      saveUserCategories();
+      renderSettingsView();
+    } else {
+      alert('Domain already exists in this category');
+    }
+  }
+  inputElement.value = '';
+}
+
+// Remove domain from category
+function removeDomainFromCategory(categoryName, domain, isSystem = false) {
+  if (isSystem) {
+    // For system categories, track removals in overrides
+    if (!systemCategoryOverrides[categoryName]) {
+      systemCategoryOverrides[categoryName] = { added: [], removed: [] };
+    }
+    // If it was user-added, remove from added list
+    if (systemCategoryOverrides[categoryName].added.includes(domain)) {
+      systemCategoryOverrides[categoryName].added = systemCategoryOverrides[categoryName].added.filter(d => d !== domain);
+    } else {
+      // Otherwise, add to removed list
+      systemCategoryOverrides[categoryName].removed.push(domain);
+    }
+    saveUserCategories();
+    renderSettingsView();
+  } else {
+    // For user categories
+    if (userCategories[categoryName]) {
+      userCategories[categoryName] = userCategories[categoryName].filter(d => d !== domain);
+      if (userCategories[categoryName].length === 0) {
+        delete userCategories[categoryName];
+      }
+      saveUserCategories();
+      renderSettingsView();
+    }
+  }
+}
+
+// Edit category name
+function editCategoryName(oldName, isSystem = false) {
+  if (isSystem) {
+    // For system categories, we can't rename them, but we can create a copy
+    const newName = prompt('Enter new category name (this will create a copy):', oldName);
+    if (newName && newName.trim() && newName.trim() !== oldName) {
+      if (userCategories[newName.trim()] || SYSTEM_CATEGORIES[newName.trim()]) {
+        alert('A category with this name already exists');
+        return;
+      }
+      // Copy domains from system category to new user category
+      const domains = getSystemCategoryWithOverrides(oldName);
+      userCategories[newName.trim()] = [...domains];
+      saveUserCategories();
+      renderSettingsView();
+    }
+  } else {
+    // For user categories
+    const newName = prompt('Enter new category name:', oldName);
+    if (newName && newName.trim() && newName.trim() !== oldName) {
+      if (userCategories[newName.trim()] || SYSTEM_CATEGORIES[newName.trim()]) {
+        alert('A category with this name already exists');
+        return;
+      }
+      userCategories[newName.trim()] = userCategories[oldName];
+      delete userCategories[oldName];
+      saveUserCategories();
+      renderSettingsView();
+    }
+  }
+}
+
+// Delete category
+function deleteCategory(categoryName) {
+  if (confirm(`Are you sure you want to delete the category "${categoryName}"?`)) {
+    delete userCategories[categoryName];
+    saveUserCategories();
+    renderSettingsView();
+  }
+}
+
+// Add new category
+function addNewCategory() {
+  const nameInput = document.getElementById('newCategoryName');
+  const categoryName = nameInput.value.trim();
+  if (!categoryName) {
+    alert('Please enter a category name');
+    return;
+  }
+
+  if (userCategories[categoryName]) {
+    alert('A category with this name already exists');
+    return;
+  }
+
+  userCategories[categoryName] = [];
+  saveUserCategories();
+  renderSettingsView();
+  nameInput.value = '';
 }
 
 // Add Enter key submission support
@@ -2437,6 +2949,20 @@ setupDateInputClickHandlers();
 setupDateRangeToggles();
 setupRequiredFieldValidation();
 
+// Setup add category button (after DOM is ready)
+const addCategoryBtn = document.getElementById('addCategoryBtn');
+const newCategoryNameInput = document.getElementById('newCategoryName');
+if (addCategoryBtn) {
+  addCategoryBtn.addEventListener('click', addNewCategory);
+}
+if (newCategoryNameInput) {
+  newCategoryNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      addNewCategory();
+    }
+  });
+}
+
 // Update when operation changes (for MCP mode)
 const operationSelect = document.getElementById("operation");
 if (operationSelect) {
@@ -2582,7 +3108,7 @@ async function executeQuery() {
   const dateRangeOperations = [
     "top_links", "top_domains", "visits_by_time_of_day", "sessions",
     "before_after_navigation", "history_search", "export_data", "navigation_paths",
-    "domain_frequency", "domain_time_distribution", "category_inference"
+    "domain_frequency", "domain_time_distribution", "category_inference", "daily_summary"
   ];
 
   // Get date range if operation supports it
@@ -2656,7 +3182,7 @@ async function executeQuery() {
           } else if (op === "top_domains_by_day") {
             const dateValue = getInputValue("date");
             if (!dateValue) {
-              alert("Date is required for this operation");
+              showError("Please select a date to view top domains for that day.");
               return;
             }
             // Double-check that the date has data (should never fail due to validation, but safety check)
@@ -2677,15 +3203,51 @@ async function executeQuery() {
             const anchorDomain = getInputValue("anchor_domain");
             const direction = getInputValue("direction", "after");
             if (!anchorDomain) {
-              alert("Anchor domain is required");
+              showError("Please enter an anchor domain to analyze navigation patterns.");
               return;
             }
             result = runLocalBeforeAfterNavigation(visits, anchorDomain, direction);
             if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "daily_summary") {
-            const days = getNumberInput("days", 1);
-            result = runLocalDailySummary(response.visits, days);
-            timeRangeInfo = { type: 'days', value: days };
+            let startDateValue = null;
+            let endDateValue = null;
+
+            // Check if date range fields are visible
+            const formContainer = document.getElementById('operationFormContainer');
+            let dateRangeFieldsVisible = false;
+            if (formContainer) {
+              const dateRangeFields = formContainer.querySelector('.date-range-fields[data-operation="daily_summary"]');
+              dateRangeFieldsVisible = dateRangeFields && dateRangeFields.style.display !== 'none';
+            }
+
+            if (dateRangeFieldsVisible && dateRangeOperations.includes(op)) {
+              // Get date values directly from inputs to avoid timezone conversion issues
+              const formContainer = document.getElementById('operationFormContainer');
+              if (formContainer) {
+                const startInput = formContainer.querySelector('input[id="start_date"]');
+                const endInput = formContainer.querySelector('input[id="end_date"]');
+                startDateValue = startInput ? startInput.value : null;
+                endDateValue = endInput ? endInput.value : null;
+              } else {
+                startDateValue = null;
+                endDateValue = null;
+              }
+            } else {
+              // If date range is not visible, default to just today
+              const today = new Date().toISOString().split('T')[0];
+              startDateValue = today;
+              endDateValue = today;
+            }
+
+            result = runLocalDailySummary(response.visits, startDateValue, endDateValue);
+
+            if (dateRangeFieldsVisible && startDateValue && endDateValue && startDateValue !== endDateValue) {
+              timeRangeInfo = { type: 'date_range', startDate: startDateValue, endDate: endDateValue };
+            } else {
+              // Single date (today or the selected date)
+              const dateToUse = endDateValue || startDateValue || new Date().toISOString().split('T')[0];
+              timeRangeInfo = { type: 'exact_date', date: dateToUse };
+            }
           } else if (op === "new_vs_familiar") {
             const days = getNumberInput("days", 7);
             result = runLocalNewVsFamiliar(response.visits, days);
@@ -2701,7 +3263,7 @@ async function executeQuery() {
           } else if (op === "history_search") {
             const query = getInputValue("search_query");
             if (!query) {
-              alert("Search query is required");
+              showError("Please enter a search query to search your browsing history.");
               return;
             }
             result = runLocalHistorySearch(visits, query);
@@ -2751,11 +3313,12 @@ async function executeQuery() {
           } else if (op === "neighbor_visits") {
             const anchorValue = getInputValue("anchor");
             if (!anchorValue) {
-              alert("Anchor URL is required for this operation");
+              showError("Please enter an anchor URL to find neighboring visits.");
               return;
             }
+            const anchorDateTime = getInputValue("anchor_datetime");
             const radiusMinutes = getNumberInput("radius", 30);
-            result = runLocalNeighborVisits(response.visits, anchorValue, radiusMinutes);
+            result = runLocalNeighborVisits(response.visits, anchorValue, radiusMinutes, anchorDateTime || null);
             // For neighbor visits, show the anchor time context
             if (result && result.anchor_time) {
               const anchorDate = new Date(result.anchor_time);
@@ -2782,7 +3345,7 @@ async function executeQuery() {
             renderResult(op, result, timeRangeInfo);
           }
         } catch (error) {
-          showError(`Error: ${error.message}`);
+          showError(`An error occurred while processing your request: ${error.message}. Please try again.`);
         }
       } else {
         // Send to MCP (existing MCP operations only)
@@ -2795,7 +3358,7 @@ async function executeQuery() {
         } else if (op === "top_domains_by_day") {
           const dateValue = getInputValue("date");
           if (!dateValue) {
-            alert("Date is required for this operation");
+            showError("Please select a date to view top domains for that day.");
             return;
           }
           // Double-check that the date has data (should never fail due to validation, but safety check)
@@ -2807,7 +3370,7 @@ async function executeQuery() {
         } else if (op === "neighbor_visits") {
           const anchorValue = getInputValue("anchor");
           if (!anchorValue) {
-            alert("Anchor URL is required for this operation");
+            showError("Please enter an anchor URL to find neighboring visits.");
             return;
           }
           payload.anchor = {
