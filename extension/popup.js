@@ -1,9 +1,197 @@
+// Category structure for local mode navigation
+const OPERATION_CATEGORIES = {
+  history: {
+    title: 'History Operations',
+    subtitle: 'Tracing the path you\'ve taken',
+    operations: [
+      {
+        id: 'history_search',
+        name: 'History search',
+        icon: '🔍',
+        help: 'Search through browsing history using keywords or partial matches.'
+      },
+      {
+        id: 'export_data',
+        name: 'Export data',
+        icon: '📥',
+        help: 'Export browsing history data for external use.'
+      },
+      {
+        id: 'sessions',
+        name: 'Sessions',
+        icon: '📅',
+        help: 'Group browsing activity into sessions based on time gaps.'
+      },
+      {
+        id: 'before_after_navigation',
+        name: 'Before/after navigation',
+        icon: '🧭',
+        help: 'Show pages visited before or after a specific page.'
+      },
+      {
+        id: 'neighbor_visits',
+        name: 'Neighbor visits',
+        icon: '🔗',
+        help: 'Show pages visited near the same time as a given page.'
+      }
+    ]
+  },
+  trends: {
+    title: 'Trends',
+    subtitle: 'Patterns that emerge over time',
+    operations: [
+      {
+        id: 'navigation_paths',
+        name: 'Most common navigation paths',
+        icon: '🛤️',
+        help: 'Identify commonly repeated navigation paths.'
+      },
+      {
+        id: 'repeated_patterns',
+        name: 'Repeated patterns',
+        icon: '🔄',
+        help: 'Detect recurring browsing sequences or behaviors.'
+      },
+      {
+        id: 'daily_summary',
+        name: 'Daily browsing summary',
+        icon: '📊',
+        help: 'Summarize browsing activity for a given day.'
+      },
+      {
+        id: 'new_vs_familiar',
+        name: 'New vs familiar sites',
+        icon: '🆕',
+        help: 'Distinguish between newly visited and frequently visited sites.'
+      },
+      {
+        id: 'repeated_daily_habits',
+        name: 'Repeated daily habits',
+        icon: '📅',
+        help: 'Identify behaviors that repeat daily or regularly.'
+      },
+      {
+        id: 'emerging_interests',
+        name: 'Emerging interests',
+        icon: '📈',
+        help: 'Detect new or increasing areas of interest.'
+      },
+      {
+        id: 'category_tagging',
+        name: 'Category tagging',
+        icon: '🏷️',
+        help: 'Assign high-level categories to visited sites.'
+      },
+      {
+        id: 'category_inference',
+        name: 'Category inference',
+        icon: '🧠',
+        help: 'Infer categories based on browsing behavior and domains.'
+      },
+      {
+        id: 'productivity_vs_distraction',
+        name: 'Productivity vs distraction',
+        icon: '⚖️',
+        help: 'Classify browsing as productive or distracting.'
+      }
+    ]
+  },
+  stats: {
+    title: 'Stats',
+    subtitle: 'Quantifying your browsing behavior',
+    operations: [
+      {
+        id: 'top_links',
+        name: 'Top visited links',
+        icon: '🔗',
+        help: 'Most frequently visited URLs.'
+      },
+      {
+        id: 'top_domains',
+        name: 'Top domains',
+        icon: '🌐',
+        help: 'Most frequently visited domains.'
+      },
+      {
+        id: 'top_domains_by_day',
+        name: 'Top domains by day',
+        icon: '📅',
+        help: 'Most visited domains per day.'
+      },
+      {
+        id: 'domain_frequency',
+        name: 'Domain frequency',
+        icon: '📊',
+        help: 'Frequency distribution of domain visits.'
+      },
+      {
+        id: 'visits_by_time_of_day',
+        name: 'Visits by time of day',
+        icon: '⏰',
+        help: 'Browsing volume grouped by time of day.'
+      },
+      {
+        id: 'domain_time_distribution',
+        name: 'Domain time distribution',
+        icon: '⏱️',
+        help: 'Time-of-day distribution per domain.'
+      },
+      {
+        id: 'browser_usage_timeline',
+        name: 'Browser usage timeline',
+        icon: '📈',
+        help: 'Timeline view of browsing activity.'
+      }
+    ]
+  }
+};
+
+// Navigation state
+let currentView = 'categories'; // 'categories', 'operations', 'operationForm'
+let currentCategory = null;
+let currentOperation = null;
+
 // Utility functions
 function getDomain(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
   } catch (e) {
     return null;
+  }
+}
+
+function getUrlDisplayLabel(url) {
+  try {
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname.replace(/^www\./, '');
+    const path = urlObj.pathname;
+    const search = urlObj.search;
+
+    // If it's just the root path, show only domain
+    if (path === '/' && !search) {
+      return domain;
+    }
+
+    // Combine path and query params, truncate if too long
+    const pathAndQuery = path + search;
+    const fullLabel = domain + pathAndQuery;
+
+    // Truncate if longer than 60 characters, but try to keep it meaningful
+    if (fullLabel.length > 60) {
+      // Try to truncate at a reasonable point (e.g., before query params if they're very long)
+      if (search && fullLabel.length > 60) {
+        const pathOnly = domain + path;
+        if (pathOnly.length <= 60) {
+          return pathOnly + '...';
+        }
+      }
+      return fullLabel.substring(0, 57) + '...';
+    }
+
+    return fullLabel;
+  } catch (e) {
+    // If parsing fails, return truncated original URL
+    return url.length > 60 ? url.substring(0, 57) + '...' : url;
   }
 }
 
@@ -91,10 +279,30 @@ function isDistracting(domain) {
 }
 
 // Local operation implementations
+function normalizeUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    // Normalize scheme to lowercase
+    urlObj.protocol = urlObj.protocol.toLowerCase();
+    // Normalize hostname to lowercase and remove www. prefix
+    urlObj.hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
+    // Remove trailing slash from path (except for root path)
+    if (urlObj.pathname !== '/' && urlObj.pathname.endsWith('/')) {
+      urlObj.pathname = urlObj.pathname.slice(0, -1);
+    }
+    return urlObj.toString();
+  } catch (e) {
+    // If parsing fails, return original URL
+    return url;
+  }
+}
+
 function runLocalTopLinks(data, limit) {
   const counter = {};
   data.forEach(v => {
-    counter[v.url] = (counter[v.url] || 0) + 1;
+    // Normalize URLs before counting to prevent duplicates
+    const normalizedUrl = normalizeUrl(v.url);
+    counter[normalizedUrl] = (counter[normalizedUrl] || 0) + 1;
   });
 
   return Object.entries(counter)
@@ -870,7 +1078,93 @@ function showError(message) {
   output.innerHTML = `<div class="error">${message}</div>`;
 }
 
-function renderTopLinks(data) {
+// Create SVG line/area chart for time distributions
+function createTimeChart(data, width = 450, height = 200, options = {}) {
+  const {
+    showArea = true,
+    showPoints = true,
+    color = '#667eea',
+    labelX = 'Time',
+    labelY = 'Count'
+  } = options;
+
+  if (!data || data.length === 0) return '';
+
+  const padding = { top: 20, right: 20, bottom: 60, left: 50 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  // Extract values and find max
+  const values = data.map(d => d.value || d.count || 0);
+  const labels = data.map(d => d.label || d.hour || d.time || '');
+  const maxValue = Math.max(...values, 1);
+
+  // Calculate points
+  const points = values.map((value, index) => {
+    const divisor = values.length > 1 ? values.length - 1 : 1;
+    const x = (index / divisor) * chartWidth + padding.left;
+    const y = chartHeight + padding.top - (value / maxValue) * chartHeight;
+    return { x, y, value, label: labels[index] };
+  });
+
+  // Create grid lines and labels
+  const gridLines = [];
+  const yLabels = [];
+  const numGridLines = 5;
+
+  for (let i = 0; i <= numGridLines; i++) {
+    const y = padding.top + (chartHeight / numGridLines) * (numGridLines - i);
+    const value = Math.round((maxValue / numGridLines) * i);
+    gridLines.push(`<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#e9ecef" stroke-width="1"/>`);
+    yLabels.push(`<text x="${padding.left - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6c757d">${value}</text>`);
+  }
+
+  // X-axis labels
+  const xLabels = [];
+  const labelStep = Math.max(1, Math.floor(labels.length / 6));
+  points.forEach((point, index) => {
+    if (index % labelStep === 0 || index === points.length - 1) {
+      xLabels.push(`<text x="${point.x}" y="${height - padding.bottom + 15}" text-anchor="middle" font-size="10" fill="#495057" font-weight="500">${point.label}</text>`);
+    }
+  });
+
+  // Create dots for data points
+  const dots = showPoints ? points.map(p =>
+    `<circle cx="${p.x}" cy="${p.y}" r="4" fill="${color}" stroke="white" stroke-width="2"/>`
+  ).join('') : '';
+
+  // Create path for line
+  const linePath = points.map((p, i) =>
+    `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
+  ).join(' ');
+
+  // Create path for area (line + bottom)
+  // For single point, create a small rectangle
+  let areaPath;
+  if (points.length === 1) {
+    const p = points[0];
+    areaPath = `M ${p.x - 5} ${chartHeight + padding.top} L ${p.x + 5} ${chartHeight + padding.top} L ${p.x + 5} ${p.y} L ${p.x - 5} ${p.y} Z`;
+  } else {
+    areaPath = `${linePath} L ${points[points.length - 1].x} ${chartHeight + padding.top} L ${points[0].x} ${chartHeight + padding.top} Z`;
+  }
+
+  return `
+    <div class="time-chart-container">
+      <svg width="${width}" height="${height}" class="time-chart">
+        ${gridLines.join('')}
+        ${yLabels.join('')}
+        ${showArea ? `<path d="${areaPath}" fill="${color}" opacity="0.2"/>` : ''}
+        <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dots}
+        ${xLabels.join('')}
+        <text x="${width / 2}" y="${height - 10}" text-anchor="middle" font-size="11" fill="#495057" font-weight="600">${labelX}</text>
+        <text x="15" y="${height / 2}" text-anchor="middle" font-size="11" fill="#495057" font-weight="600" transform="rotate(-90, 15, ${height / 2})">${labelY}</text>
+      </svg>
+    </div>
+  `;
+}
+
+function renderTopLinks(data, timeRangeInfo = null) {
   if (!Array.isArray(data) || data.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
@@ -878,17 +1172,18 @@ function renderTopLinks(data) {
   const maxCount = Math.max(...data.map(item => item.visit_count || 0));
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🔗 Top Visited Links</div>';
+  html += '<div class="card"><div class="card-header">🔗 Top Visited Links ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="bar-chart">';
 
   data.forEach((item, index) => {
     const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
     const url = item.url || '';
-    const domain = getDomain(url);
+    // Show the full URL path, not just the domain, so different URLs are distinguishable
+    const displayLabel = getUrlDisplayLabel(url) || 'Unknown';
     html += `
       <div class="bar-item">
         <div class="bar-label" title="${url}">
-          <strong>#${index + 1}</strong> ${domain || 'Unknown'}
+          ${displayLabel}
         </div>
         <div class="bar-container">
           <div class="bar-fill" style="width: ${percentage}%">${item.visit_count}</div>
@@ -902,7 +1197,7 @@ function renderTopLinks(data) {
   return html;
 }
 
-function renderTopDomains(data) {
+function renderTopDomains(data, timeRangeInfo = null) {
   if (!Array.isArray(data) || data.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
@@ -910,7 +1205,7 @@ function renderTopDomains(data) {
   const maxCount = Math.max(...data.map(item => item.visit_count || 0));
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🌐 Top Domains</div>';
+  html += '<div class="card"><div class="card-header">🌐 Top Domains ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="bar-chart">';
 
   data.forEach((item, index) => {
@@ -919,7 +1214,7 @@ function renderTopDomains(data) {
     html += `
       <div class="bar-item">
         <div class="bar-label">
-          <strong>#${index + 1}</strong> ${item.domain}
+          ${item.domain}
           <span class="category-badge category-${category.toLowerCase().replace(' ', '-')}">${category}</span>
         </div>
         <div class="bar-container">
@@ -934,48 +1229,56 @@ function renderTopDomains(data) {
   return html;
 }
 
-function renderVisitsByTimeOfDay(data) {
+function renderVisitsByTimeOfDay(data, timeRangeInfo = null) {
   if (!Array.isArray(data) || data.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">⏰ Visits by Time of Day</div>';
+  html += '<div class="card"><div class="card-header">⏰ Visits by Time of Day ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
+  // Create chart data for each time slot
+  const chartData = data.map(slot => {
+    const totalVisits = slot.domains.reduce((sum, d) => sum + (d.visit_count || 0), 0);
+    return {
+      label: slot.time_slot.split(' ')[0], // "Morning", "Afternoon", etc.
+      value: totalVisits,
+      time_slot: slot.time_slot
+    };
+  });
+
+  html += createTimeChart(chartData, 450, 200, {
+    labelX: 'Time of Day',
+    labelY: 'Total Visits',
+    color: '#667eea'
+  });
+
+  // Show top domains for each slot below the chart
+  html += '<div style="margin-top: 20px;">';
   data.forEach(slot => {
-    html += `<div class="time-slot">`;
+    html += `<div class="time-slot" style="margin-bottom: 16px;">`;
     html += `<div class="time-slot-header">${slot.time_slot}</div>`;
-    html += '<div class="bar-chart">';
-
-    const maxCount = Math.max(...slot.domains.map(d => d.visit_count || 0));
+    html += '<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">';
 
     slot.domains.slice(0, 5).forEach(domain => {
-      const percentage = maxCount > 0 ? (domain.visit_count / maxCount) * 100 : 0;
-      html += `
-        <div class="bar-item">
-          <div class="bar-label">${domain.domain}</div>
-          <div class="bar-container">
-            <div class="bar-fill" style="width: ${percentage}%">${domain.visit_count}</div>
-          </div>
-          <div class="bar-value">${domain.visit_count}</div>
-        </div>
-      `;
+      html += `<span class="category-badge category-other">${domain.domain} (${domain.visit_count})</span>`;
     });
 
     html += '</div></div>';
   });
+  html += '</div>';
 
   html += '</div></div>';
   return html;
 }
 
-function renderSessions(data) {
+function renderSessions(data, timeRangeInfo = null) {
   if (!Array.isArray(data) || data.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No sessions found</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">📅 Browsing Sessions</div>';
+  html += '<div class="card"><div class="card-header">📅 Browsing Sessions ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   data.slice(0, 10).forEach((session, index) => {
     const start = new Date(session.start);
@@ -983,7 +1286,7 @@ function renderSessions(data) {
     html += `
       <div class="session-card">
         <div class="session-time">
-          <strong>Session #${index + 1}</strong> • ${start.toLocaleString()} → ${end.toLocaleString()}
+          <strong>Session</strong> • ${start.toLocaleString()} → ${end.toLocaleString()}
         </div>
         <div class="session-stats">
           <div class="session-stat">⏱️ ${session.duration_minutes} min</div>
@@ -997,7 +1300,7 @@ function renderSessions(data) {
   return html;
 }
 
-function renderDailySummary(data) {
+function renderDailySummary(data, timeRangeInfo = null) {
   if (!Array.isArray(data) || data.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
@@ -1038,13 +1341,13 @@ function renderDailySummary(data) {
   return html;
 }
 
-function renderCategoryTagging(data) {
+function renderCategoryTagging(data, timeRangeInfo = null) {
   if (!data.categories || data.categories.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🏷️ Category Tagging</div>';
+  html += '<div class="card"><div class="card-header">🏷️ Category Tagging ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
 
@@ -1072,9 +1375,9 @@ function renderCategoryTagging(data) {
   return html;
 }
 
-function renderProductivityVsDistraction(data) {
+function renderProductivityVsDistraction(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">⚖️ Productivity vs Distraction</div>';
+  html += '<div class="card"><div class="card-header">⚖️ Productivity vs Distraction ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="stats-grid">';
   html += `<div class="stat-card" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);">
     <div class="stat-value">${data.productive.count}</div>
@@ -1104,13 +1407,13 @@ function renderProductivityVsDistraction(data) {
   return html;
 }
 
-function renderHistorySearch(data) {
+function renderHistorySearch(data, timeRangeInfo = null) {
   if (!data.matches || data.matches.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">🔍</div><div>No matches found for "' + data.query + '"</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🔍 Search Results: "' + data.query + '"</div>';
+  html += '<div class="card"><div class="card-header">🔍 Search Results: "' + data.query + '" ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += `<div style="margin-bottom: 12px; color: #6c757d;">Found ${data.match_count} matches</div>`;
 
   data.matches.forEach(match => {
@@ -1129,13 +1432,13 @@ function renderHistorySearch(data) {
   return html;
 }
 
-function renderNavigationPaths(data) {
+function renderNavigationPaths(data, timeRangeInfo = null) {
   if (!data.most_common_paths || data.most_common_paths.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No navigation paths found</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🛤️ Most Common Navigation Paths</div>';
+  html += '<div class="card"><div class="card-header">🛤️ Most Common Navigation Paths ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   const maxCount = Math.max(...data.most_common_paths.map(p => p.count || 0));
 
@@ -1160,9 +1463,9 @@ function renderNavigationPaths(data) {
   return html;
 }
 
-function renderNewVsFamiliar(data) {
+function renderNewVsFamiliar(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🆕 New vs Familiar Sites</div>';
+  html += '<div class="card"><div class="card-header">🆕 New vs Familiar Sites ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="stats-grid">';
   html += `<div class="stat-card"><div class="stat-value">${data.new_site_count}</div><div class="stat-label">New Sites</div></div>`;
   html += `<div class="stat-card"><div class="stat-value">${data.familiar_site_count}</div><div class="stat-label">Familiar Sites</div></div>`;
@@ -1179,13 +1482,13 @@ function renderNewVsFamiliar(data) {
   return html;
 }
 
-function renderBeforeAfterNavigation(data) {
+function renderBeforeAfterNavigation(data, timeRangeInfo = null) {
   if (data.error) {
     return `<div class="error">Anchor domain "${data.anchor_domain}" not found in history</div>`;
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🧭 Navigation ' + (data.direction === 'after' ? 'After' : 'Before') + ' ' + data.anchor_domain + '</div>';
+  html += '<div class="card"><div class="card-header">🧭 Navigation ' + (data.direction === 'after' ? 'After' : 'Before') + ' ' + data.anchor_domain + ' ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   if (data.most_common && data.most_common.length > 0) {
     const maxCount = Math.max(...data.most_common.map(d => d.count || 0));
@@ -1209,13 +1512,13 @@ function renderBeforeAfterNavigation(data) {
   return html;
 }
 
-function renderNeighborVisits(data) {
+function renderNeighborVisits(data, timeRangeInfo = null) {
   if (data.error) {
     return `<div class="error">Anchor URL not found in history</div>`;
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🔗 Neighbor Visits</div>';
+  html += '<div class="card"><div class="card-header">🔗 Neighbor Visits ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += `<div style="margin-bottom: 12px; color: #6c757d;">Around ${data.anchor_domain} at ${new Date(data.anchor_time).toLocaleString()}</div>`;
 
   if (data.domain_counts && data.domain_counts.length > 0) {
@@ -1240,13 +1543,13 @@ function renderNeighborVisits(data) {
   return html;
 }
 
-function renderCategoryInference(data) {
+function renderCategoryInference(data, timeRangeInfo = null) {
   if (!data.categories || data.categories.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🏷️ Category Inference</div>';
+  html += '<div class="card"><div class="card-header">🏷️ Category Inference ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
 
@@ -1272,33 +1575,65 @@ function renderCategoryInference(data) {
   return html;
 }
 
-function renderRepeatedPatterns(data) {
+function renderRepeatedPatterns(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">🔄 Repeated Patterns (Last ' + data.period_days + ' days)</div>';
+  html += '<div class="card"><div class="card-header">🔄 Repeated Patterns ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   if (data.by_hour && data.by_hour.length > 0) {
-    html += '<div style="margin-bottom: 20px;"><strong>By Hour of Day:</strong></div>';
-    data.by_hour.forEach(hourData => {
-      html += `<div style="margin-bottom: 12px;"><strong>${hourData.hour}:00</strong>`;
-      if (hourData.top_domains && hourData.top_domains.length > 0) {
-        hourData.top_domains.forEach(domain => {
-          html += `<span class="category-badge category-other" style="margin-left: 8px;">${domain.domain} (${domain.count})</span>`;
-        });
-      }
-      html += '</div>';
+    // Sort by hour
+    const sortedHours = [...data.by_hour].sort((a, b) => a.hour - b.hour);
+
+    // Create chart data - sum up all domain visits per hour
+    const chartData = sortedHours.map(hourData => {
+      const totalVisits = hourData.top_domains ?
+        hourData.top_domains.reduce((sum, d) => sum + d.count, 0) : 0;
+      return {
+        label: hourData.hour + ':00',
+        value: totalVisits,
+        hour: hourData.hour
+      };
     });
+
+    html += '<div style="margin-bottom: 20px;"><strong>By Hour of Day:</strong></div>';
+    html += createTimeChart(chartData, 450, 200, {
+      labelX: 'Hour',
+      labelY: 'Total Visits',
+      color: '#667eea'
+    });
+
+    // Show top domains for peak hours
+    const peakHours = sortedHours
+      .map(h => ({ hour: h.hour, total: h.top_domains ? h.top_domains.reduce((sum, d) => sum + d.count, 0) : 0 }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 3);
+
+    html += '<div style="margin-top: 16px; font-size: 12px; color: #6c757d;">Peak hours: ';
+    html += peakHours.map(h => `${h.hour}:00`).join(', ');
+    html += '</div>';
   }
 
   if (data.by_day_of_week && data.by_day_of_week.length > 0) {
-    html += '<div style="margin-top: 20px; margin-bottom: 12px;"><strong>By Day of Week:</strong></div>';
-    data.by_day_of_week.forEach(dayData => {
-      html += `<div style="margin-bottom: 12px;"><strong>${dayData.day}</strong>`;
-      if (dayData.top_domains && dayData.top_domains.length > 0) {
-        dayData.top_domains.forEach(domain => {
-          html += `<span class="category-badge category-other" style="margin-left: 8px;">${domain.domain} (${domain.count})</span>`;
-        });
-      }
-      html += '</div>';
+    const dayOrder = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const sortedDays = [...data.by_day_of_week].sort((a, b) =>
+      dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)
+    );
+
+    // Create chart data for days
+    const chartData = sortedDays.map(dayData => {
+      const totalVisits = dayData.top_domains ?
+        dayData.top_domains.reduce((sum, d) => sum + d.count, 0) : 0;
+      return {
+        label: dayData.day.substring(0, 3), // "Mon", "Tue", etc.
+        value: totalVisits,
+        day: dayData.day
+      };
+    });
+
+    html += '<div style="margin-top: 30px; margin-bottom: 20px;"><strong>By Day of Week:</strong></div>';
+    html += createTimeChart(chartData, 450, 200, {
+      labelX: 'Day',
+      labelY: 'Total Visits',
+      color: '#764ba2'
     });
   }
 
@@ -1306,13 +1641,13 @@ function renderRepeatedPatterns(data) {
   return html;
 }
 
-function renderRepeatedDailyHabits(data) {
+function renderRepeatedDailyHabits(data, timeRangeInfo = null) {
   if (!data.daily_habits || data.daily_habits.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No daily habits found</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">📅 Repeated Daily Habits (Last ' + data.period_days + ' days)</div>';
+  html += '<div class="card"><div class="card-header">📅 Repeated Daily Habits ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   data.daily_habits.forEach(habit => {
     html += `
@@ -1330,13 +1665,13 @@ function renderRepeatedDailyHabits(data) {
   return html;
 }
 
-function renderEmergingInterests(data) {
+function renderEmergingInterests(data, timeRangeInfo = null) {
   if (!data.emerging_interests || data.emerging_interests.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No emerging interests found</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">📈 Emerging Interests (Last ' + data.period_days + ' days)</div>';
+  html += '<div class="card"><div class="card-header">📈 Emerging Interests ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   data.emerging_interests.forEach(interest => {
     html += `
@@ -1354,63 +1689,82 @@ function renderEmergingInterests(data) {
   return html;
 }
 
-function renderBrowserUsageTimeline(data) {
+function renderBrowserUsageTimeline(data, timeRangeInfo = null) {
   if (!data.timeline || data.timeline.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No timeline data found</div></div>';
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">⏱️ Browser Usage Timeline (Last ' + data.period_hours + ' hours)</div>';
+  html += '<div class="card"><div class="card-header">⏱️ Browser Usage Timeline ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   if (data.hourly_summary && data.hourly_summary.length > 0) {
-    html += '<div style="margin-bottom: 16px;"><strong>Hourly Summary:</strong></div>';
-    const maxCount = Math.max(...data.hourly_summary.map(h => h.visit_count || 0));
-    data.hourly_summary.forEach(hour => {
-      const percentage = maxCount > 0 ? (hour.visit_count / maxCount) * 100 : 0;
-      html += `
-        <div class="bar-item">
-          <div class="bar-label">${hour.hour}:00 (${hour.unique_domains} domains)</div>
-          <div class="bar-container">
-            <div class="bar-fill" style="width: ${percentage}%">${hour.visit_count}</div>
-          </div>
-          <div class="bar-value">${hour.visit_count}</div>
-        </div>
-      `;
+    // Create chart data
+    const chartData = data.hourly_summary.map(hour => ({
+      label: hour.hour + ':00',
+      value: hour.visit_count,
+      hour: hour.hour,
+      unique_domains: hour.unique_domains
+    }));
+
+    html += createTimeChart(chartData, 450, 200, {
+      labelX: 'Hour',
+      labelY: 'Visits',
+      color: '#667eea'
     });
+
+    // Show summary stats below chart
+    const totalVisits = data.hourly_summary.reduce((sum, h) => sum + h.visit_count, 0);
+    const avgVisits = Math.round(totalVisits / data.hourly_summary.length);
+    const peakHour = data.hourly_summary.reduce((max, h) => h.visit_count > max.visit_count ? h : max, data.hourly_summary[0]);
+
+    html += '<div class="stats-grid" style="margin-top: 20px;">';
+    html += `<div class="stat-card"><div class="stat-value">${totalVisits}</div><div class="stat-label">Total Visits</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${avgVisits}</div><div class="stat-label">Avg/Hour</div></div>`;
+    html += `<div class="stat-card"><div class="stat-value">${peakHour.hour}:00</div><div class="stat-label">Peak Hour</div></div>`;
+    html += '</div>';
   }
 
   html += '</div></div>';
   return html;
 }
 
-function renderDomainTimeDistribution(data) {
+function renderDomainTimeDistribution(data, timeRangeInfo = null) {
   if (!Array.isArray(data) || data.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
 
   let html = '<div class="result-container">';
 
-  data.forEach(domainData => {
+  // Use different colors for multiple domains
+  const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe'];
+
+  data.forEach((domainData, index) => {
     html += '<div class="card">';
-    html += `<div class="card-header">⏰ ${domainData.domain}</div>`;
+    const timeRangeHeader = index === 0 ? ' ' + formatTimeRangeForHeader(timeRangeInfo) : '';
+    html += `<div class="card-header">⏰ ${domainData.domain}${timeRangeHeader}</div>`;
     html += `<div style="margin-bottom: 12px; color: #6c757d;">Peak hour: ${domainData.peak_hour}:00</div>`;
 
     if (domainData.hourly_distribution && domainData.hourly_distribution.length > 0) {
-      const maxCount = Math.max(...domainData.hourly_distribution.map(h => h.count || 0));
-      html += '<div class="bar-chart">';
-      domainData.hourly_distribution.forEach(hour => {
-        const percentage = maxCount > 0 ? (hour.count / maxCount) * 100 : 0;
-        html += `
-          <div class="bar-item">
-            <div class="bar-label">${hour.hour}:00</div>
-            <div class="bar-container">
-              <div class="bar-fill" style="width: ${percentage}%">${hour.count}</div>
-            </div>
-            <div class="bar-value">${hour.count}</div>
-          </div>
-        `;
+      // Sort by hour to ensure proper ordering
+      const sortedHours = [...domainData.hourly_distribution].sort((a, b) => a.hour - b.hour);
+
+      // Create chart data
+      const chartData = sortedHours.map(hour => ({
+        label: hour.hour + ':00',
+        value: hour.count,
+        hour: hour.hour
+      }));
+
+      const color = colors[index % colors.length];
+      html += createTimeChart(chartData, 450, 200, {
+        labelX: 'Hour of Day',
+        labelY: 'Visits',
+        color: color
       });
-      html += '</div>';
+
+      // Show total visits
+      const totalVisits = sortedHours.reduce((sum, h) => sum + h.count, 0);
+      html += `<div style="margin-top: 12px; text-align: center; color: #6c757d; font-size: 13px;">Total: <strong>${totalVisits}</strong> visits</div>`;
     }
 
     html += '</div>';
@@ -1420,7 +1774,52 @@ function renderDomainTimeDistribution(data) {
   return html;
 }
 
-function renderResult(operation, result) {
+// Helper function to format time range display
+function formatTimeRange(timeRangeInfo) {
+  if (!timeRangeInfo) return '';
+
+  const { type, value, startDate, endDate, date } = timeRangeInfo;
+
+  if (type === 'exact_date') {
+    const dateObj = new Date(date);
+    return dateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  } else if (type === 'date_range') {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${startStr} - ${endStr}`;
+  } else if (type === 'days') {
+    if (value === 1) return 'Last 24 hours';
+    if (value <= 7) return `Last ${value} days`;
+    if (value <= 30) return `Last ${value} days`;
+    return `Last ${value} days`;
+  } else if (type === 'hours') {
+    if (value === 1) return 'Last hour';
+    if (value === 24) return 'Last 24 hours';
+    if (value < 24) return `Last ${value} hours`;
+    const days = Math.floor(value / 24);
+    const hours = value % 24;
+    if (hours === 0) return `Last ${days} ${days === 1 ? 'day' : 'days'}`;
+    return `Last ${days} ${days === 1 ? 'day' : 'days'} and ${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  } else if (type === 'all_time') {
+    return 'All time';
+  } else if (type === 'default_range') {
+    // For operations that use default 7 days
+    return 'Last 7 days';
+  }
+  return '';
+}
+
+// Helper function to format time range for display in headers
+function formatTimeRangeForHeader(timeRangeInfo) {
+  console.log(timeRangeInfo);
+  const rangeText = formatTimeRange(timeRangeInfo);
+  if (!rangeText) return '';
+  return `<span style="font-weight: 400; color: #667eea; font-size: 0.9em;">(${rangeText})</span>`;
+}
+
+function renderResult(operation, result, timeRangeInfo = null) {
   const output = document.getElementById("output");
 
   if (result.error) {
@@ -1430,66 +1829,66 @@ function renderResult(operation, result) {
 
   switch (operation) {
     case 'top_links':
-      output.innerHTML = renderTopLinks(result);
+      output.innerHTML = renderTopLinks(result, timeRangeInfo);
       break;
     case 'top_domains':
     case 'top_domains_by_day':
-      output.innerHTML = renderTopDomains(result);
+      output.innerHTML = renderTopDomains(result, timeRangeInfo);
       break;
     case 'domain_frequency':
-      output.innerHTML = renderTopDomains(result);
+      output.innerHTML = renderTopDomains(result, timeRangeInfo);
       break;
     case 'visits_by_time_of_day':
-      output.innerHTML = renderVisitsByTimeOfDay(result);
+      output.innerHTML = renderVisitsByTimeOfDay(result, timeRangeInfo);
       break;
     case 'sessions':
-      output.innerHTML = renderSessions(result);
+      output.innerHTML = renderSessions(result, timeRangeInfo);
       break;
     case 'daily_summary':
-      output.innerHTML = renderDailySummary(result);
+      output.innerHTML = renderDailySummary(result, timeRangeInfo);
       break;
     case 'category_tagging':
-      output.innerHTML = renderCategoryTagging(result);
+      output.innerHTML = renderCategoryTagging(result, timeRangeInfo);
       break;
     case 'category_inference':
-      output.innerHTML = renderCategoryInference(result);
+      output.innerHTML = renderCategoryInference(result, timeRangeInfo);
       break;
     case 'productivity_vs_distraction':
-      output.innerHTML = renderProductivityVsDistraction(result);
+      output.innerHTML = renderProductivityVsDistraction(result, timeRangeInfo);
       break;
     case 'history_search':
-      output.innerHTML = renderHistorySearch(result);
+      output.innerHTML = renderHistorySearch(result, timeRangeInfo);
       break;
     case 'navigation_paths':
-      output.innerHTML = renderNavigationPaths(result);
+      output.innerHTML = renderNavigationPaths(result, timeRangeInfo);
       break;
     case 'new_vs_familiar':
-      output.innerHTML = renderNewVsFamiliar(result);
+      output.innerHTML = renderNewVsFamiliar(result, timeRangeInfo);
       break;
     case 'before_after_navigation':
-      output.innerHTML = renderBeforeAfterNavigation(result);
+      output.innerHTML = renderBeforeAfterNavigation(result, timeRangeInfo);
       break;
     case 'neighbor_visits':
-      output.innerHTML = renderNeighborVisits(result);
+      output.innerHTML = renderNeighborVisits(result, timeRangeInfo);
       break;
     case 'repeated_patterns':
-      output.innerHTML = renderRepeatedPatterns(result);
+      output.innerHTML = renderRepeatedPatterns(result, timeRangeInfo);
       break;
     case 'repeated_daily_habits':
-      output.innerHTML = renderRepeatedDailyHabits(result);
+      output.innerHTML = renderRepeatedDailyHabits(result, timeRangeInfo);
       break;
     case 'emerging_interests':
-      output.innerHTML = renderEmergingInterests(result);
+      output.innerHTML = renderEmergingInterests(result, timeRangeInfo);
       break;
     case 'browser_usage_timeline':
-      output.innerHTML = renderBrowserUsageTimeline(result);
+      output.innerHTML = renderBrowserUsageTimeline(result, timeRangeInfo);
       break;
     case 'domain_time_distribution':
-      output.innerHTML = renderDomainTimeDistribution(result);
+      output.innerHTML = renderDomainTimeDistribution(result, timeRangeInfo);
       break;
     default:
       // Fallback to JSON for operations without specific renderers
-      output.innerHTML = `<div class="card"><div class="card-header">Result</div><pre style="background: #f8f9fa; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(result, null, 2)}</pre></div>`;
+      output.innerHTML = `<div class="card"><div class="card-header">Result ${formatTimeRangeForHeader(timeRangeInfo)}</div><pre style="background: #f8f9fa; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(result, null, 2)}</pre></div>`;
   }
 }
 
@@ -1515,11 +1914,59 @@ function saveMode(mode) {
   chrome.storage.local.set({ mode });
 }
 
+// Validate required fields for the current operation
+function validateRequiredFields() {
+  const mode = getCurrentMode();
+  let op;
+
+  if (mode === 'local') {
+    op = currentOperation;
+  } else {
+    op = document.getElementById("operation").value;
+  }
+
+  const sendButton = document.getElementById("send");
+
+  // If no operation is selected, disable button
+  if (!op || op === "" || op === "select") {
+    sendButton.disabled = true;
+    return;
+  }
+
+  // Check required fields based on operation
+  let isValid = true;
+
+  if (op === "top_domains_by_day") {
+    const dateValue = getInputValue("date");
+    isValid = dateValue != null && String(dateValue).trim() !== "";
+  } else if (op === "neighbor_visits") {
+    const anchorValue = getInputValue("anchor");
+    isValid = anchorValue != null && String(anchorValue).trim() !== "";
+  } else if (op === "before_after_navigation") {
+    const anchorDomain = getInputValue("anchor_domain");
+    isValid = anchorDomain != null && String(anchorDomain).trim() !== "";
+  } else if (op === "history_search") {
+    const searchQuery = getInputValue("search_query");
+    isValid = searchQuery != null && String(searchQuery).trim() !== "";
+  }
+
+  sendButton.disabled = !isValid;
+}
+
 // Show/hide fields based on selected operation and enable/disable button
 function updateFieldsVisibility() {
-  const op = document.getElementById("operation").value;
+  const mode = getCurrentMode();
+  let op;
+
+  if (mode === 'local') {
+    // In local mode, use currentOperation from navigation state
+    op = currentOperation;
+  } else {
+    // In MCP mode, use the select dropdown
+    op = document.getElementById("operation").value;
+  }
+
   const sections = document.querySelectorAll(".section[data-operation]");
-  const sendButton = document.getElementById("send");
 
   // Show/hide sections based on operation
   sections.forEach(section => {
@@ -1530,11 +1977,193 @@ function updateFieldsVisibility() {
     }
   });
 
-  // Enable/disable button based on whether an operation is selected
-  if (op === "" || op === "select") {
+  // Validate required fields and update button state
+  validateRequiredFields();
+}
+
+// Navigation functions for local mode
+function showCategoriesView() {
+  currentView = 'categories';
+  currentCategory = null;
+  currentOperation = null;
+
+  document.getElementById('categoriesView').style.display = 'block';
+  document.getElementById('operationsView').style.display = 'none';
+  document.getElementById('operationFormView').style.display = 'none';
+
+  // Clear any operation selection
+  const operationSelect = document.getElementById('operation');
+  if (operationSelect) {
+    operationSelect.value = '';
+  }
+
+  // Clear all form inputs
+  clearAllInputs();
+
+  // Hide the send button
+  const sendButton = document.getElementById('send');
+  if (sendButton) {
+    sendButton.style.display = 'none';
     sendButton.disabled = true;
+  }
+}
+
+function showOperationsView(categoryId) {
+  currentView = 'operations';
+  currentCategory = categoryId;
+  currentOperation = null;
+
+  const category = OPERATION_CATEGORIES[categoryId];
+  if (!category) return;
+
+  document.getElementById('categoriesView').style.display = 'none';
+  document.getElementById('operationsView').style.display = 'block';
+  document.getElementById('operationFormView').style.display = 'none';
+
+  // Update view title
+  document.getElementById('operationsViewTitle').textContent = category.title;
+
+  // Render operations list
+  const operationsList = document.getElementById('operationsList');
+  operationsList.innerHTML = '';
+
+  category.operations.forEach(op => {
+    const opCard = document.createElement('div');
+    opCard.className = 'operation-card';
+    opCard.dataset.operationId = op.id;
+    opCard.innerHTML = `
+      <div class="operation-name">
+        <span class="operation-icon">${op.icon || '🔍'}</span>
+        <span>${op.name}</span>
+      </div>
+      <div class="operation-help">${op.help}</div>
+    `;
+    opCard.addEventListener('click', () => showOperationFormView(op.id));
+    operationsList.appendChild(opCard);
+  });
+
+  // Clear all form inputs
+  clearAllInputs();
+
+  // Hide the send button
+  const sendButton = document.getElementById('send');
+  if (sendButton) {
+    sendButton.style.display = 'none';
+    sendButton.disabled = true;
+  }
+}
+
+function showOperationFormView(operationId) {
+  currentView = 'operationForm';
+  currentOperation = operationId;
+
+  document.getElementById('categoriesView').style.display = 'none';
+  document.getElementById('operationsView').style.display = 'none';
+  document.getElementById('operationFormView').style.display = 'block';
+
+  // Update view title
+  const category = OPERATION_CATEGORIES[currentCategory];
+  const operation = category?.operations.find(op => op.id === operationId);
+  document.getElementById('operationFormViewTitle').textContent = operation?.name || operationId;
+
+  // Set the operation select value (for compatibility with existing code)
+  const operationSelect = document.getElementById('operation');
+  if (operationSelect) {
+    operationSelect.value = operationId;
+  }
+
+  // Clear form container and show the appropriate form section
+  const formContainer = document.getElementById('operationFormContainer');
+  formContainer.innerHTML = '';
+
+  // Find and clone the section for this operation
+  const sections = document.querySelectorAll(".section[data-operation]");
+  let targetSection = null;
+
+  sections.forEach(section => {
+    if (section.getAttribute("data-operation") === operationId) {
+      targetSection = section;
+    }
+  });
+
+  if (targetSection) {
+    // Clone the section
+    const clonedSection = targetSection.cloneNode(true);
+    clonedSection.classList.add("visible");
+    clonedSection.style.display = "flex";
+
+    formContainer.appendChild(clonedSection);
+
+    // Re-setup date inputs and toggles for the cloned section
+    setTimeout(() => {
+      setupDateInputs();
+      setupDateInputClickHandlers();
+      setupDateRangeToggles();
+      validateRequiredFields();
+    }, 0);
+  }
+
+  // Show the send button
+  const sendButton = document.getElementById('send');
+  if (sendButton) {
+    sendButton.style.display = 'block';
+  }
+}
+
+function clearAllInputs() {
+  // Clear all input fields
+  const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]');
+  inputs.forEach(input => {
+    input.value = '';
+  });
+
+  // Clear all select fields
+  const selects = document.querySelectorAll('select');
+  selects.forEach(select => {
+    if (select.id !== 'operation') { // Don't clear operation select
+      select.value = '';
+    }
+  });
+
+  // Hide all date range fields
+  const dateRangeFields = document.querySelectorAll('.date-range-fields');
+  dateRangeFields.forEach(fields => {
+    fields.style.display = 'none';
+  });
+
+  // Reset date range toggles
+  const toggles = document.querySelectorAll('.date-range-toggle');
+  toggles.forEach(toggle => {
+    toggle.textContent = '📅 Set custom date range';
+  });
+
+  // Hide all sections
+  const sections = document.querySelectorAll('.section[data-operation]');
+  sections.forEach(section => {
+    section.classList.remove('visible');
+  });
+}
+
+function updateNavigationForMode(mode) {
+  const localNav = document.getElementById('localModeNavigation');
+  const mcpNav = document.getElementById('mcpModeNavigation');
+  const sendButton = document.getElementById('send');
+
+  if (mode === 'local') {
+    localNav.style.display = 'block';
+    mcpNav.style.display = 'none';
+    showCategoriesView();
   } else {
-    sendButton.disabled = false;
+    localNav.style.display = 'none';
+    mcpNav.style.display = 'block';
+    // Clear local navigation state
+    currentView = 'categories';
+    currentCategory = null;
+    currentOperation = null;
+    // Show button for MCP mode (it will be enabled/disabled based on operation selection)
+    if (sendButton) {
+      sendButton.style.display = 'block';
+    }
   }
 }
 
@@ -1551,29 +2180,300 @@ async function initializeModeRadio() {
     modeMCP.checked = true;
   }
 
+  // Update navigation based on initial mode
+  updateNavigationForMode(currentMode);
+
   // Add event listeners to both radio buttons
   modeLocal.addEventListener('change', () => {
     if (modeLocal.checked) {
       saveMode('local');
+      updateNavigationForMode('local');
     }
   });
 
   modeMCP.addEventListener('change', () => {
     if (modeMCP.checked) {
       saveMode('mcp');
+      updateNavigationForMode('mcp');
     }
+  });
+
+  // Setup category card click handlers
+  const categoryCards = document.querySelectorAll('.category-card');
+  categoryCards.forEach(card => {
+    card.addEventListener('click', () => {
+      const categoryId = card.dataset.category;
+      showOperationsView(categoryId);
+    });
+  });
+
+  // Setup back button handlers
+  document.getElementById('backToCategories').addEventListener('click', () => {
+    showCategoriesView();
+  });
+
+  document.getElementById('backToOperations').addEventListener('click', () => {
+    if (currentCategory) {
+      showOperationsView(currentCategory);
+    } else {
+      showCategoriesView();
+    }
+  });
+}
+
+// Add Enter key submission support
+function setupEnterKeySubmission() {
+  // Get all input and select elements
+  const inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"]');
+  inputs.forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const sendButton = document.getElementById("send");
+        if (!sendButton.disabled) {
+          executeQuery();
+        }
+      }
+    });
+  });
+}
+
+// Get available dates from history
+async function getAvailableDates() {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      {
+        type: "FETCH_HISTORY",
+        startTime: Date.now() - 1000 * 60 * 60 * 24 * 365, // Last year
+        maxResults: 50000
+      },
+      (response) => {
+        const dateSet = new Set();
+        if (response && response.visits) {
+          response.visits.forEach(visit => {
+            const date = new Date(visit.visited_at).toISOString().split('T')[0];
+            dateSet.add(date);
+          });
+        }
+        const dates = Array.from(dateSet).sort();
+        resolve(dates);
+      }
+    );
+  });
+}
+
+// Store available dates globally for validation
+let availableDatesSet = new Set();
+let dateInputsSetup = false;
+
+// Setup date inputs with availability checking
+async function setupDateInputs() {
+  const dates = await getAvailableDates();
+  if (dates.length === 0) return;
+
+  const minDate = dates[0];
+  const maxDate = dates[dates.length - 1];
+  availableDatesSet = new Set(dates);
+
+  // Set min/max for all date inputs
+  const dateInputs = document.querySelectorAll('input[type="date"]');
+  dateInputs.forEach(input => {
+    input.setAttribute('min', minDate);
+    input.setAttribute('max', maxDate);
+
+    // Remove existing event listener if already set up
+    if (dateInputsSetup && input.dataset.dateListenerAdded) {
+      return; // Already set up
+    }
+
+    // Store previous valid value
+    let previousValidValue = input.value || '';
+
+    // Aggressive validation - intercept invalid dates immediately
+    const validateAndClearInvalid = (e) => {
+      const selectedDate = e.target.value;
+
+      // If date is selected and not in available dates, clear it immediately
+      if (selectedDate && !availableDatesSet.has(selectedDate)) {
+        // Immediately clear the invalid date
+        e.target.value = '';
+        previousValidValue = '';
+
+        // Show error message
+        let errorMsg = input.parentElement.querySelector('.date-error');
+        if (!errorMsg) {
+          errorMsg = document.createElement('div');
+          errorMsg.className = 'date-error';
+          errorMsg.style.cssText = 'color: #dc3545; font-size: 12px; margin-top: 4px;';
+          input.parentElement.appendChild(errorMsg);
+        }
+        errorMsg.textContent = `No data available for ${selectedDate}. Only dates with history data can be selected.`;
+        input.style.borderColor = '#dc3545';
+
+        // Clear error after a delay
+        setTimeout(() => {
+          if (errorMsg && errorMsg.parentElement) {
+            errorMsg.remove();
+            input.style.borderColor = '';
+          }
+        }, 4000);
+
+        // Trigger validation to update button state
+        validateRequiredFields();
+      } else if (selectedDate) {
+        // Date is valid, update previous valid value
+        previousValidValue = selectedDate;
+
+        // Clear any existing error
+        const errorMsg = input.parentElement.querySelector('.date-error');
+        if (errorMsg) {
+          errorMsg.remove();
+        }
+        input.style.borderColor = '';
+
+        // Trigger validation to update button state
+        validateRequiredFields();
+      }
+    };
+
+    // Use multiple events to catch date selection from calendar
+    // 'input' fires when value changes (including calendar selection)
+    input.addEventListener('input', validateAndClearInvalid);
+    // 'change' fires when user commits the change
+    input.addEventListener('change', validateAndClearInvalid);
+    // 'blur' fires when input loses focus (catches manual typing)
+    input.addEventListener('blur', validateAndClearInvalid);
+
+    // Add title attribute for tooltip
+    input.setAttribute('title', `Only dates with history data can be selected (${dates.length} dates available)`);
+    input.dataset.dateListenerAdded = 'true';
+  });
+  dateInputsSetup = true;
+
+  // Set up click handlers for all date inputs to open picker when clicking anywhere
+  setupDateInputClickHandlers();
+}
+
+// Setup click handlers for all date inputs to open picker on click
+function setupDateInputClickHandlers() {
+  const allDateInputs = document.querySelectorAll('input[type="date"]');
+  allDateInputs.forEach(input => {
+    // Only add if not already added
+    if (!input.dataset.clickHandlerAdded) {
+      input.addEventListener('click', (e) => {
+        // Focus the input to ensure it's active
+        input.focus();
+        // Try to show the picker if the browser supports it (modern browsers)
+        if (input.showPicker) {
+          try {
+            input.showPicker();
+          } catch (err) {
+            // showPicker might fail in some contexts, that's okay
+          }
+        }
+      });
+      input.dataset.clickHandlerAdded = 'true';
+    }
+  });
+}
+
+// Setup validation listeners for required fields
+function setupRequiredFieldValidation() {
+  // Add listeners to all required input fields
+  const requiredFields = {
+    "top_domains_by_day": ["date"],
+    "neighbor_visits": ["anchor"],
+    "before_after_navigation": ["anchor_domain"],
+    "history_search": ["search_query"]
+  };
+
+  // Get all unique field IDs
+  const allFieldIds = new Set();
+  Object.values(requiredFields).forEach(fields => {
+    fields.forEach(fieldId => allFieldIds.add(fieldId));
+  });
+
+  // Add event listeners to each required field
+  allFieldIds.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      // Listen to input, change, and blur events
+      field.addEventListener("input", validateRequiredFields);
+      field.addEventListener("change", validateRequiredFields);
+      field.addEventListener("blur", validateRequiredFields);
+    }
+  });
+}
+
+// Setup date range toggle functionality
+function setupDateRangeToggles() {
+  const toggles = document.querySelectorAll('.date-range-toggle');
+  toggles.forEach(toggle => {
+    toggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      const operation = toggle.getAttribute('data-operation');
+      const fields = document.querySelector(`.date-range-fields[data-operation="${operation}"]`);
+
+      if (fields) {
+        const isVisible = fields.style.display !== 'none';
+        if (isVisible) {
+          fields.style.display = 'none';
+          toggle.textContent = '📅 Set custom date range';
+        } else {
+          fields.style.display = 'block';
+          toggle.textContent = '📅 Hide date range';
+        }
+      }
+    });
   });
 }
 
 // Initialize on page load
 updateFieldsVisibility();
 initializeModeRadio();
+setupEnterKeySubmission();
+setupDateInputs();
+setupDateInputClickHandlers();
+setupDateRangeToggles();
+setupRequiredFieldValidation();
 
-// Update when operation changes
-document.getElementById("operation").addEventListener("change", updateFieldsVisibility);
+// Update when operation changes (for MCP mode)
+const operationSelect = document.getElementById("operation");
+if (operationSelect) {
+  operationSelect.addEventListener("change", () => {
+    const mode = getCurrentMode();
+    // Only handle this in MCP mode
+    if (mode === 'mcp') {
+      updateFieldsVisibility();
+      // Re-setup date inputs when operation changes (in case new date inputs are shown)
+      setupDateInputs();
+      // Setup click handlers for newly visible date inputs
+      setupDateInputClickHandlers();
+      // Setup date range toggles for newly visible sections
+      setupDateRangeToggles();
+      // Re-validate after operation change
+      validateRequiredFields();
+    }
+  });
+}
 
 function getInputValue(id, defaultValue = null) {
-  const elem = document.getElementById(id);
+  const mode = getCurrentMode();
+  let elem = null;
+
+  // In local mode with operation form, search in the form container first
+  if (mode === 'local' && currentView === 'operationForm') {
+    const formContainer = document.getElementById('operationFormContainer');
+    if (formContainer) {
+      elem = formContainer.querySelector(`#${id}`);
+    }
+  }
+
+  // Fallback to document-wide search
+  if (!elem) {
+    elem = document.getElementById(id);
+  }
+
   return elem ? elem.value : defaultValue;
 }
 
@@ -1582,8 +2482,94 @@ function getNumberInput(id, defaultValue = null) {
   return value ? Number(value) : defaultValue;
 }
 
-document.getElementById("send").onclick = async () => {
-  const op = document.getElementById("operation").value;
+// Get date range from inputs, with defaults
+// Finds inputs within the currently visible section for the given operation
+function getDateRange(operation = null) {
+  let startDateValue = null;
+  let endDateValue = null;
+  const mode = getCurrentMode();
+
+  // In local mode, search in the form container first
+  if (mode === 'local' && currentView === 'operationForm') {
+    const formContainer = document.getElementById('operationFormContainer');
+    if (formContainer) {
+      const startInput = formContainer.querySelector('input[id="start_date"]');
+      const endInput = formContainer.querySelector('input[id="end_date"]');
+      startDateValue = startInput ? startInput.value : null;
+      endDateValue = endInput ? endInput.value : null;
+    }
+  } else if (operation) {
+    // Find the visible section for this operation
+    const visibleSection = document.querySelector(`.section[data-operation="${operation}"].visible`);
+    if (visibleSection) {
+      const startInput = visibleSection.querySelector('input[id="start_date"]');
+      const endInput = visibleSection.querySelector('input[id="end_date"]');
+      startDateValue = startInput ? startInput.value : null;
+      endDateValue = endInput ? endInput.value : null;
+    }
+  } else {
+    // Fallback: try to find any visible start_date/end_date inputs
+    const visibleSections = document.querySelectorAll('.section.visible');
+    for (const section of visibleSections) {
+      const startInput = section.querySelector('input[id="start_date"]');
+      const endInput = section.querySelector('input[id="end_date"]');
+      if (startInput || endInput) {
+        startDateValue = startInput ? startInput.value : null;
+        endDateValue = endInput ? endInput.value : null;
+        break;
+      }
+    }
+  }
+
+  // Default to 7 days ago to today if not specified
+  // Use local time to avoid timezone issues
+  let endDate, startDate;
+
+  if (endDateValue) {
+    // Parse date string and set to end of day in local time
+    const [year, month, day] = endDateValue.split('-').map(Number);
+    endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+  } else {
+    endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  if (startDateValue) {
+    // Parse date string and set to start of day in local time
+    const [year, month, day] = startDateValue.split('-').map(Number);
+    startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+  } else {
+    startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    startDate.setHours(0, 0, 0, 0);
+  }
+
+  return { startDate, endDate };
+}
+
+// Filter visits by date range
+function filterVisitsByDateRange(visits, startDate, endDate) {
+  return visits.filter(visit => {
+    const visitDate = new Date(visit.visited_at);
+    return visitDate >= startDate && visitDate <= endDate;
+  });
+}
+
+async function executeQuery() {
+  const mode = getCurrentMode();
+  let op;
+
+  if (mode === 'local') {
+    // In local mode, use currentOperation from navigation state
+    op = currentOperation;
+    // Also update the hidden select for compatibility
+    const operationSelect = document.getElementById("operation");
+    if (operationSelect) {
+      operationSelect.value = op;
+    }
+  } else {
+    // In MCP mode, use the select dropdown
+    op = document.getElementById("operation").value;
+  }
 
   // Prevent action if no operation is selected
   if (!op || op === "") {
@@ -1591,14 +2577,29 @@ document.getElementById("send").onclick = async () => {
   }
 
   showLoading();
-  const mode = getCurrentMode();
 
-  // Determine time range based on operation
+  // Operations that support date range selection
+  const dateRangeOperations = [
+    "top_links", "top_domains", "visits_by_time_of_day", "sessions",
+    "before_after_navigation", "history_search", "export_data", "navigation_paths",
+    "domain_frequency", "domain_time_distribution", "category_inference"
+  ];
+
+  // Get date range if operation supports it
+  let dateRange = null;
   let daysBack = 7;
-  if (op === "repeated_daily_habits" || op === "emerging_interests") {
-    daysBack = 30;
-  } else if (op === "browser_usage_timeline") {
-    daysBack = 1;
+  if (dateRangeOperations.includes(op)) {
+    dateRange = getDateRange(op);
+    // Calculate daysBack to fetch enough history (add 1 day buffer)
+    const daysDiff = Math.ceil((dateRange.endDate - dateRange.startDate) / (1000 * 60 * 60 * 24));
+    daysBack = Math.max(daysDiff + 1, 7); // At least 7 days
+  } else {
+    // Determine time range based on operation
+    if (op === "repeated_daily_habits" || op === "emerging_interests") {
+      daysBack = 30;
+    } else if (op === "browser_usage_timeline") {
+      daysBack = 1;
+    }
   }
 
   // Fetch history data first (needed for both modes)
@@ -1612,26 +2613,66 @@ document.getElementById("send").onclick = async () => {
       if (mode === "local") {
         // Run local logic
         let result;
+        let timeRangeInfo = null;
 
         try {
+          // Filter visits by date range if operation supports it
+          let visits = response.visits;
+
+          // Re-read date range inside callback to ensure we get current values
+          if (dateRangeOperations.includes(op)) {
+            const currentDateRange = getDateRange(op);
+            visits = filterVisitsByDateRange(visits, currentDateRange.startDate, currentDateRange.endDate);
+
+            // Format dates in local timezone for display (YYYY-MM-DD)
+            const formatLocalDate = (date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            };
+
+            // Always set date_range type to show actual date range
+            timeRangeInfo = {
+              type: 'date_range',
+              startDate: formatLocalDate(currentDateRange.startDate),
+              endDate: formatLocalDate(currentDateRange.endDate)
+            };
+          } else {
+            // For operations without date range, visits stays as response.visits
+            visits = response.visits;
+          }
+
           if (op === "top_links") {
             const limit = getNumberInput("limit", 10);
-            result = runLocalTopLinks(response.visits, limit);
+            result = runLocalTopLinks(visits, limit);
+            // timeRangeInfo already set above if dateRange exists
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "top_domains") {
             const limit = getNumberInput("limit", 10);
-            result = runLocalTopDomains(response.visits, limit);
+            result = runLocalTopDomains(visits, limit);
+            // timeRangeInfo already set above if dateRange exists
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "top_domains_by_day") {
             const dateValue = getInputValue("date");
             if (!dateValue) {
               alert("Date is required for this operation");
               return;
             }
+            // Double-check that the date has data (should never fail due to validation, but safety check)
+            if (!availableDatesSet.has(dateValue)) {
+              showError(`No data available for ${dateValue}. Please select a date with available history data.`);
+              return;
+            }
             result = runLocalTopDomainsByDay(response.visits, dateValue);
+            timeRangeInfo = { type: 'exact_date', date: dateValue };
           } else if (op === "visits_by_time_of_day") {
-            result = runLocalVisitsByTimeOfDay(response.visits);
+            result = runLocalVisitsByTimeOfDay(visits);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "sessions") {
             const gapMinutes = getNumberInput("session_gap", 30);
-            result = runLocalSessions(response.visits, gapMinutes);
+            result = runLocalSessions(visits, gapMinutes);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "before_after_navigation") {
             const anchorDomain = getInputValue("anchor_domain");
             const direction = getInputValue("direction", "after");
@@ -1639,51 +2680,74 @@ document.getElementById("send").onclick = async () => {
               alert("Anchor domain is required");
               return;
             }
-            result = runLocalBeforeAfterNavigation(response.visits, anchorDomain, direction);
+            result = runLocalBeforeAfterNavigation(visits, anchorDomain, direction);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "daily_summary") {
             const days = getNumberInput("days", 1);
             result = runLocalDailySummary(response.visits, days);
+            timeRangeInfo = { type: 'days', value: days };
           } else if (op === "new_vs_familiar") {
             const days = getNumberInput("days", 7);
             result = runLocalNewVsFamiliar(response.visits, days);
+            timeRangeInfo = { type: 'days', value: days };
           } else if (op === "category_tagging") {
             const dateValue = getInputValue("date");
             result = runLocalCategoryTagging(response.visits, dateValue || null);
+            if (dateValue) {
+              timeRangeInfo = { type: 'exact_date', date: dateValue };
+            } else {
+              timeRangeInfo = { type: 'all_time' };
+            }
           } else if (op === "history_search") {
             const query = getInputValue("search_query");
             if (!query) {
               alert("Search query is required");
               return;
             }
-            result = runLocalHistorySearch(response.visits, query);
+            result = runLocalHistorySearch(visits, query);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "export_data") {
             const format = getInputValue("export_format", "json");
-            result = runLocalExportData(response.visits, format);
+            result = runLocalExportData(visits, format);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "navigation_paths") {
             const limit = getNumberInput("limit", 10);
-            result = runLocalNavigationPaths(response.visits, limit);
+            result = runLocalNavigationPaths(visits, limit);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "repeated_patterns") {
             const days = getNumberInput("days", 7);
             result = runLocalRepeatedPatterns(response.visits, days);
+            timeRangeInfo = { type: 'days', value: days };
           } else if (op === "domain_frequency") {
-            result = runLocalDomainFrequency(response.visits);
+            result = runLocalDomainFrequency(visits);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "domain_time_distribution") {
             const domainFilter = getInputValue("domain_filter");
-            result = runLocalDomainTimeDistribution(response.visits, domainFilter || null);
+            result = runLocalDomainTimeDistribution(visits, domainFilter || null);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "category_inference") {
-            result = runLocalCategoryInference(response.visits);
+            result = runLocalCategoryInference(visits);
+            if (!timeRangeInfo) timeRangeInfo = { type: 'default_range' };
           } else if (op === "productivity_vs_distraction") {
             const dateValue = getInputValue("date");
             result = runLocalProductivityVsDistraction(response.visits, dateValue || null);
+            if (dateValue) {
+              timeRangeInfo = { type: 'exact_date', date: dateValue };
+            } else {
+              timeRangeInfo = { type: 'all_time' };
+            }
           } else if (op === "repeated_daily_habits") {
             const days = getNumberInput("days", 30);
             result = runLocalRepeatedDailyHabits(response.visits, days);
+            timeRangeInfo = { type: 'days', value: days };
           } else if (op === "emerging_interests") {
             const days = getNumberInput("days", 7);
             result = runLocalEmergingInterests(response.visits, days);
+            timeRangeInfo = { type: 'days', value: days };
           } else if (op === "browser_usage_timeline") {
             const hours = getNumberInput("hours", 24);
             result = runLocalBrowserUsageTimeline(response.visits, hours);
+            timeRangeInfo = { type: 'hours', value: hours };
           } else if (op === "neighbor_visits") {
             const anchorValue = getInputValue("anchor");
             if (!anchorValue) {
@@ -1692,6 +2756,13 @@ document.getElementById("send").onclick = async () => {
             }
             const radiusMinutes = getNumberInput("radius", 30);
             result = runLocalNeighborVisits(response.visits, anchorValue, radiusMinutes);
+            // For neighbor visits, show the anchor time context
+            if (result && result.anchor_time) {
+              const anchorDate = new Date(result.anchor_time);
+              timeRangeInfo = { type: 'exact_date', date: anchorDate.toISOString().split('T')[0] };
+            } else {
+              timeRangeInfo = { type: 'default_range' };
+            }
           } else {
             result = { error: "Unknown operation: " + op };
           }
@@ -1708,7 +2779,7 @@ document.getElementById("send").onclick = async () => {
             URL.revokeObjectURL(url);
             document.getElementById("output").innerHTML = '<div class="card"><div class="card-header">✅ Export Complete</div><div class="card-content">Your browsing history has been downloaded!</div></div>';
           } else {
-            renderResult(op, result);
+            renderResult(op, result, timeRangeInfo);
           }
         } catch (error) {
           showError(`Error: ${error.message}`);
@@ -1725,6 +2796,11 @@ document.getElementById("send").onclick = async () => {
           const dateValue = getInputValue("date");
           if (!dateValue) {
             alert("Date is required for this operation");
+            return;
+          }
+          // Double-check that the date has data (should never fail due to validation, but safety check)
+          if (!availableDatesSet.has(dateValue)) {
+            showError(`No data available for ${dateValue}. Please select a date with available history data.`);
             return;
           }
           payload.date = dateValue;
@@ -1750,8 +2826,23 @@ document.getElementById("send").onclick = async () => {
         });
 
         const json = await res.json();
-        renderResult(op, json);
+        // Calculate time range for MCP operations
+        let timeRangeInfo = null;
+        if (op === "top_domains_by_day") {
+          const dateValue = getInputValue("date");
+          if (dateValue) {
+            timeRangeInfo = { type: 'exact_date', date: dateValue };
+          }
+        } else if (op === "neighbor_visits" && json.anchor_time) {
+          const anchorDate = new Date(json.anchor_time);
+          timeRangeInfo = { type: 'exact_date', date: anchorDate.toISOString().split('T')[0] };
+        } else {
+          timeRangeInfo = { type: 'default_range' };
+        }
+        renderResult(op, json, timeRangeInfo);
       }
     }
   );
-};
+}
+
+document.getElementById("send").onclick = executeQuery;

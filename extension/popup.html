@@ -134,6 +134,10 @@
       background: white;
     }
 
+    input[type="date"] {
+      cursor: pointer;
+    }
+
     select:focus, input:focus {
       outline: none;
       border-color: #667eea;
@@ -482,6 +486,36 @@
       opacity: 0.5;
     }
 
+    /* Time Chart */
+    .time-chart-container {
+      margin: 16px 0;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .time-chart {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .time-chart line {
+      stroke-dasharray: 2,2;
+    }
+
+    .time-chart path {
+      transition: opacity 0.3s;
+    }
+
+    .time-chart circle {
+      transition: r 0.2s;
+    }
+
+    .time-chart circle:hover {
+      r: 6;
+    }
+
     /* Scrollbar styling */
     #output::-webkit-scrollbar {
       width: 8px;
@@ -499,6 +533,156 @@
 
     #output::-webkit-scrollbar-thumb:hover {
       background: #764ba2;
+    }
+
+    /* Date range toggle link */
+    .date-range-toggle {
+      color: #667eea;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-block;
+      padding: 4px 0;
+      transition: color 0.2s;
+    }
+
+    .date-range-toggle:hover {
+      color: #764ba2;
+      text-decoration: underline;
+    }
+
+    .date-range-fields {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    /* Category-based Navigation Styles */
+    .navigation-view {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .category-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+      border: 2px solid transparent;
+    }
+
+    .category-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .category-card:active {
+      transform: translateY(-2px);
+    }
+
+    .category-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .category-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .category-subtitle {
+      font-size: 12px;
+      opacity: 0.9;
+      line-height: 1.4;
+    }
+
+    .navigation-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .back-button {
+      padding: 8px 16px;
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #495057;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .back-button:hover {
+      background: #e9ecef;
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    .view-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #212529;
+      flex: 1;
+    }
+
+    .operations-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .operation-card {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .operation-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+      transform: translateX(4px);
+    }
+
+    .operation-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #212529;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .operation-help {
+      font-size: 13px;
+      color: #6c757d;
+      line-height: 1.5;
+    }
+
+    .operation-icon {
+      font-size: 18px;
     }
   </style>
 </head>
@@ -524,47 +708,105 @@
       </div>
     </div>
 
-    <div class="form-group">
-      <label>Operation</label>
-      <select id="operation">
-        <option value="">Select an operation...</option>
-        <optgroup label="Top & Frequency">
-          <option value="top_links">Top visited links</option>
-          <option value="top_domains">Top domains</option>
-          <option value="top_domains_by_day">Top domains by day</option>
-          <option value="domain_frequency">Domain frequency</option>
-        </optgroup>
-        <optgroup label="Time Analysis">
-          <option value="visits_by_time_of_day">Visits by time of day</option>
-          <option value="domain_time_distribution">Domain time distribution</option>
-          <option value="browser_usage_timeline">Browser usage timeline</option>
-        </optgroup>
-        <optgroup label="Navigation & Patterns">
-          <option value="sessions">Sessions</option>
-          <option value="before_after_navigation">Before/after navigation</option>
-          <option value="navigation_paths">Most common navigation paths</option>
-          <option value="repeated_patterns">Repeated patterns</option>
-          <option value="neighbor_visits">Neighbor visits</option>
-        </optgroup>
-        <optgroup label="Summary & Trends">
-          <option value="daily_summary">Daily browsing summary</option>
-          <option value="new_vs_familiar">New vs familiar sites</option>
-          <option value="repeated_daily_habits">Repeated daily habits</option>
-          <option value="emerging_interests">Emerging interests</option>
-        </optgroup>
-        <optgroup label="Categories & Productivity">
-          <option value="category_tagging">Category tagging</option>
-          <option value="category_inference">Category inference</option>
-          <option value="productivity_vs_distraction">Productivity vs distraction</option>
-        </optgroup>
-        <optgroup label="Search & Export">
-          <option value="history_search">History search</option>
-          <option value="export_data">Export data</option>
-        </optgroup>
-      </select>
+    <!-- Local Mode: Category-based Navigation -->
+    <div id="localModeNavigation" style="display: none;">
+      <!-- Categories View -->
+      <div id="categoriesView" class="navigation-view">
+        <div class="categories-grid">
+          <div class="category-card" data-category="history">
+            <div class="category-icon">📚</div>
+            <div class="category-title">History Operations</div>
+            <div class="category-subtitle">Tracing the path you've taken</div>
+          </div>
+          <div class="category-card" data-category="trends">
+            <div class="category-icon">📈</div>
+            <div class="category-title">Trends</div>
+            <div class="category-subtitle">Patterns that emerge over time</div>
+          </div>
+          <div class="category-card" data-category="stats">
+            <div class="category-icon">📊</div>
+            <div class="category-title">Stats</div>
+            <div class="category-subtitle">Quantifying your browsing behavior</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operations View -->
+      <div id="operationsView" class="navigation-view" style="display: none;">
+        <div class="navigation-header">
+          <button class="back-button" id="backToCategories">← Back</button>
+          <div class="view-title" id="operationsViewTitle"></div>
+        </div>
+        <div class="operations-list" id="operationsList"></div>
+      </div>
+
+      <!-- Operation Form View -->
+      <div id="operationFormView" class="navigation-view" style="display: none;">
+        <div class="navigation-header">
+          <button class="back-button" id="backToOperations">← Back</button>
+          <div class="view-title" id="operationFormViewTitle"></div>
+        </div>
+        <div id="operationFormContainer"></div>
+      </div>
+    </div>
+
+    <!-- MCP Mode: Dropdown (kept for MCP mode) -->
+    <div id="mcpModeNavigation" style="display: none;">
+      <div class="form-group">
+        <label>Operation</label>
+        <select id="operation">
+          <option value="">Select an operation...</option>
+          <optgroup label="Top & Frequency">
+            <option value="top_links">Top visited links</option>
+            <option value="top_domains">Top domains</option>
+            <option value="top_domains_by_day">Top domains by day</option>
+            <option value="domain_frequency">Domain frequency</option>
+          </optgroup>
+          <optgroup label="Time Analysis">
+            <option value="visits_by_time_of_day">Visits by time of day</option>
+            <option value="domain_time_distribution">Domain time distribution</option>
+            <option value="browser_usage_timeline">Browser usage timeline</option>
+          </optgroup>
+          <optgroup label="Navigation & Patterns">
+            <option value="sessions">Sessions</option>
+            <option value="before_after_navigation">Before/after navigation</option>
+            <option value="navigation_paths">Most common navigation paths</option>
+            <option value="repeated_patterns">Repeated patterns</option>
+            <option value="neighbor_visits">Neighbor visits</option>
+          </optgroup>
+          <optgroup label="Summary & Trends">
+            <option value="daily_summary">Daily browsing summary</option>
+            <option value="new_vs_familiar">New vs familiar sites</option>
+            <option value="repeated_daily_habits">Repeated daily habits</option>
+            <option value="emerging_interests">Emerging interests</option>
+          </optgroup>
+          <optgroup label="Categories & Productivity">
+            <option value="category_tagging">Category tagging</option>
+            <option value="category_inference">Category inference</option>
+            <option value="productivity_vs_distraction">Productivity vs distraction</option>
+          </optgroup>
+          <optgroup label="Search & Export">
+            <option value="history_search">History search</option>
+            <option value="export_data">Export data</option>
+          </optgroup>
+        </select>
+      </div>
     </div>
 
     <div class="section" data-operation="top_links">
+      <div class="form-group">
+        <a href="#" class="date-range-toggle" data-operation="top_links">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="top_links" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
+      </div>
       <div class="form-group">
         <label>Limit <span class="optional">(optional, default: 10)</span></label>
         <input id="limit" type="number" value="10" min="1" />
@@ -572,6 +814,19 @@
     </div>
 
     <div class="section" data-operation="top_domains">
+      <div class="form-group">
+        <a href="#" class="date-range-toggle" data-operation="top_domains">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="top_domains" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
+      </div>
       <div class="form-group">
         <label>Limit <span class="optional">(optional, default: 10)</span></label>
         <input id="limit" type="number" value="10" min="1" />
@@ -587,11 +842,34 @@
 
     <div class="section" data-operation="visits_by_time_of_day">
       <div class="form-group">
-        <label style="color: #6c757d;">No parameters needed</label>
+        <a href="#" class="date-range-toggle" data-operation="visits_by_time_of_day">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="visits_by_time_of_day" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
       </div>
     </div>
 
     <div class="section" data-operation="sessions">
+      <div class="form-group">
+        <a href="#" class="date-range-toggle" data-operation="sessions">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="sessions" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
+      </div>
       <div class="form-group">
         <label>Session gap (minutes) <span class="optional">(optional, default: 30)</span></label>
         <input id="session_gap" type="number" value="30" min="1" />
@@ -599,6 +877,19 @@
     </div>
 
     <div class="section" data-operation="before_after_navigation">
+      <div class="form-group">
+        <a href="#" class="date-range-toggle" data-operation="before_after_navigation">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="before_after_navigation" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
+      </div>
       <div class="form-group">
         <label>Anchor domain <span class="required">*</span></label>
         <input id="anchor_domain" type="text" placeholder="youtube.com" />
@@ -638,9 +929,35 @@
         <label>Search query <span class="required">*</span></label>
         <input id="search_query" type="text" placeholder="python" />
       </div>
+      <div class="form-group">
+        <a href="#" class="date-range-toggle" data-operation="history_search">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="history_search" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
+      </div>
     </div>
 
     <div class="section" data-operation="export_data">
+      <div class="form-group">
+        <a href="#" class="date-range-toggle" data-operation="export_data">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="export_data" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
+      </div>
       <div class="form-group">
         <label>Format <span class="optional">(optional, default: json)</span></label>
         <select id="export_format">
@@ -650,6 +967,19 @@
     </div>
 
     <div class="section" data-operation="navigation_paths">
+      <div class="form-group">
+        <a href="#" class="date-range-toggle" data-operation="navigation_paths">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="navigation_paths" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
+      </div>
       <div class="form-group">
         <label>Limit <span class="optional">(optional, default: 10)</span></label>
         <input id="limit" type="number" value="10" min="1" />
@@ -665,11 +995,34 @@
 
     <div class="section" data-operation="domain_frequency">
       <div class="form-group">
-        <label style="color: #6c757d;">No parameters needed</label>
+        <a href="#" class="date-range-toggle" data-operation="domain_frequency">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="domain_frequency" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
       </div>
     </div>
 
     <div class="section" data-operation="domain_time_distribution">
+      <div class="form-group">
+        <a href="#" class="date-range-toggle" data-operation="domain_time_distribution">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="domain_time_distribution" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
+      </div>
       <div class="form-group">
         <label>Domain filter <span class="optional">(optional, leave empty for all domains)</span></label>
         <input id="domain_filter" type="text" placeholder="youtube.com" />
@@ -678,7 +1031,17 @@
 
     <div class="section" data-operation="category_inference">
       <div class="form-group">
-        <label style="color: #6c757d;">No parameters needed</label>
+        <a href="#" class="date-range-toggle" data-operation="category_inference">📅 Set custom date range</a>
+      </div>
+      <div class="date-range-fields" data-operation="category_inference" style="display: none;">
+        <div class="form-group">
+          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+          <input id="start_date" type="date" />
+        </div>
+        <div class="form-group">
+          <label>End Date <span class="optional">(optional, default: today)</span></label>
+          <input id="end_date" type="date" />
+        </div>
       </div>
     </div>
 
@@ -721,7 +1084,7 @@
       </div>
     </div>
 
-    <button id="send" disabled>🚀 Run Query</button>
+    <button id="send" disabled style="display: none;">📥 Fetch</button>
 
     <div id="output"></div>
   </div>

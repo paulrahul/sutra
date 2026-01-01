@@ -9,5 +9,11 @@
   },
   "action": {
     "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "img/sutra_icon_16.png",
+    "32": "img/sutra_icon_32.png",
+    "48": "img/sutra_icon_48.png",
+    "128": "img/sutra_icon_128.png"
   }
 }
