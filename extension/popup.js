@@ -4256,3 +4256,67 @@ async function executeQuery() {
 }
 
 document.getElementById("send").onclick = executeQuery;
+
+// Rotating placeholder text for AI search bar
+const sampleQueries = [
+  "What topics dominate my browsing lately?",
+  "Which subjects do I keep returning to?",
+  "List the links that I visited related to ethnic metallic jewellery",
+  "Find that Italian website I visited which has traditional recipes ",
+  "list the links which have been long pending to be read",
+  "What kind of content distracts me?",
+  "What topics have I stopped caring about?",
+  "How much time do I spend on politics? give detailed report.",
+  "What do I spend more time on than I realize?",
+  "How intentional is my browsing?"
+];
+
+function initRotatingPlaceholder() {
+  const searchInput = document.querySelector('.ai-search-bar');
+  if (!searchInput) return;
+
+  let currentIndex = 0;
+  const rotationInterval = 3000; // 3 seconds per placeholder
+  const baseFontSize = 13; // Base font size in pixels (matches CSS)
+  const minFontSize = 11; // Minimum font size to prevent text from being too small
+  const maxTextLength = 75; // Approximate characters that fit comfortably at base font size
+
+  function updatePlaceholder() {
+    if (searchInput) {
+      const query = sampleQueries[currentIndex];
+      searchInput.placeholder = query;
+      searchInput.title = query; // Show full text on hover
+
+      // Dynamically adjust font size based on text length
+      // Longer text gets smaller font size to fit better, but not too small
+      if (query.length > maxTextLength) {
+        // Calculate font size: reduce by 0.5px for every ~15 characters over the max
+        const lengthDiff = query.length - maxTextLength;
+        const sizeReduction = Math.floor(lengthDiff / 15) * 0.5;
+        const calculatedSize = Math.max(
+          minFontSize,
+          baseFontSize - sizeReduction
+        );
+        searchInput.style.fontSize = `${calculatedSize}px`;
+      } else {
+        // Reset to base font size for shorter queries
+        searchInput.style.fontSize = `${baseFontSize}px`;
+      }
+
+      currentIndex = (currentIndex + 1) % sampleQueries.length;
+    }
+  }
+
+  // Set initial placeholder
+  updatePlaceholder();
+
+  // Rotate placeholder every 3 seconds
+  setInterval(updatePlaceholder, rotationInterval);
+}
+
+// Initialize rotating placeholder when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initRotatingPlaceholder);
+} else {
+  initRotatingPlaceholder();
+}

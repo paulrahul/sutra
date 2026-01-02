@@ -32,7 +32,7 @@
 
     .header {
       text-align: center;
-      padding-bottom: 20px;
+      /* padding-bottom: 20px; */
       border-bottom: none;
     }
 
@@ -63,38 +63,69 @@
       font-weight: 500;
     }
 
-    /* AI Search Bar - Prominent placement for future feature */
+    /* AI Search Bar - Coming Soon Feature */
+    .coming-soon-container {
+      margin-top: 40px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+      border: 2px dashed #d1d5db;
+      border-radius: 16px;
+      position: relative;
+      opacity: 0.85;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .coming-soon-container:hover {
+      opacity: 1;
+      border-color: #667eea;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    }
+
+    .coming-soon-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
     .search-container {
       position: relative;
-      /* margin-bottom: 8px; */
+      margin-bottom: 10px;
     }
 
     .ai-search-bar {
       width: 100%;
-      padding: 14px 48px 14px 16px;
+      padding: 14px 42px 14px 16px;
       border: 2px solid #e5e7eb;
       border-radius: 12px;
-      font-size: 14px;
+      font-size: 13px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       background: white;
-      color: #1f2937;
+      color: #9ca3af;
       font-weight: 500;
-    }
-
-    .ai-search-bar:focus {
-      outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(102, 126, 234, 0.15);
-      transform: translateY(-1px);
+      cursor: not-allowed;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .ai-search-bar::placeholder {
       color: #9ca3af;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .search-icon {
       position: absolute;
-      right: 14px;
+      right: 12px;
       top: 50%;
       transform: translateY(-50%);
       color: #9ca3af;
@@ -103,16 +134,12 @@
       transition: color 0.3s;
     }
 
-    .ai-search-bar:focus + .search-icon {
-      color: #667eea;
-    }
-
     .search-hint {
-      font-size: 11px;
-      color: #9ca3af;
+      font-size: 12px;
+      color: #6b7280;
       text-align: center;
-      /* margin-top: 2px; */
-      font-weight: 500;
+      font-weight: 600;
+      letter-spacing: 0.3px;
     }
 
     .mode-container {
@@ -1290,19 +1317,6 @@
       <p>Insights from your browsing patterns</p>
     </div>
 
-    <!-- AI Search Bar - Coming Soon -->
-    <div class="search-container">
-      <input
-        type="text"
-        class="ai-search-bar"
-        placeholder="Ask anything about your browsing history..."
-        disabled
-        title="AI-powered search coming soon"
-      />
-      <span class="search-icon">🔍</span>
-    </div>
-    <div class="search-hint">✨ AI-powered search coming soon</div>
-
     <div class="mode-container">
       <span class="mode-label">Mode:</span>
       <div class="radio-group">
@@ -1348,6 +1362,22 @@
             </div>
             <div class="category-subtitle">Patterns that emerge over time</div>
           </div>
+        </div>
+
+        <!-- AI Search Bar - Coming Soon -->
+        <div class="coming-soon-container">
+          <div class="coming-soon-badge">✨ Coming Soon</div>
+          <div class="search-container">
+            <input
+              type="text"
+              class="ai-search-bar"
+              placeholder="Ask anything about your browsing history..."
+              disabled
+              title="AI-powered search coming soon"
+            />
+            <span class="search-icon">🔍</span>
+          </div>
+          <div class="search-hint">AI-powered semantic search. Ask anything about your browsing history.</div>
         </div>
       </div>
 
