@@ -207,13 +207,25 @@
     input[type="date"],
     input[type="datetime-local"] {
       cursor: pointer;
-      color: #9ca3af; /* Lighter shade similar to placeholder */
+      color: #9ca3af; /* Lighter shade for placeholder */
       font-weight: 500;
     }
 
     input[type="date"]:focus,
     input[type="datetime-local"]:focus {
       color: #1f2937; /* Darker color when focused for better visibility */
+    }
+
+    /* Show normal color when date input has a value (not just placeholder) */
+    input[type="date"]:not(:invalid):not([value=""]),
+    input[type="datetime-local"]:not(:invalid):not([value=""]) {
+      color: #1f2937; /* Normal font color when has value */
+    }
+
+    /* Additional check for dynamically set values using JavaScript */
+    input[type="date"].has-value,
+    input[type="datetime-local"].has-value {
+      color: #1f2937; /* Normal font color when has value */
     }
 
     input[type="date"]::-webkit-calendar-picker-indicator,

@@ -65,24 +65,24 @@ const OPERATION_CATEGORIES = {
         icon: '🌐',
         help: 'Most frequently visited domains.'
       },
-      {
-        id: 'top_domains_by_day',
-        name: 'Top domains by day',
-        icon: '📅',
-        help: 'Most visited domains per day.'
-      },
-      {
-        id: 'domain_frequency',
-        name: 'Domain frequency',
-        icon: '📊',
-        help: 'Frequency distribution of domain visits.'
-      },
-      {
-        id: 'visits_by_time_of_day',
-        name: 'Visits by time of day',
-        icon: '⏰',
-        help: 'Browsing volume grouped by time of day.'
-      },
+      // {
+      //   id: 'top_domains_by_day',
+      //   name: 'Top domains by day',
+      //   icon: '📅',
+      //   help: 'Most visited domains per day.'
+      // },
+      // {
+      //   id: 'domain_frequency',
+      //   name: 'Domain frequency',
+      //   icon: '📊',
+      //   help: 'Frequency distribution of domain visits.'
+      // },
+      // {
+      //   id: 'visits_by_time_of_day',
+      //   name: 'Visits by time of day',
+      //   icon: '⏰',
+      //   help: 'Browsing volume grouped by time of day.'
+      // },
       {
         id: 'domain_time_distribution',
         name: 'Domain time distribution',
@@ -119,12 +119,12 @@ const OPERATION_CATEGORIES = {
         icon: '📊',
         help: 'Summarize browsing activity for a given day.'
       },
-      {
-        id: 'repeated_daily_habits',
-        name: 'Repeated daily habits',
-        icon: '📅',
-        help: 'Identify behaviors that repeat daily or regularly.'
-      },
+      // {
+      //   id: 'repeated_daily_habits',
+      //   name: 'Repeated daily habits',
+      //   icon: '📅',
+      //   help: 'Identify behaviors that repeat daily or regularly.'
+      // },
       {
         id: 'emerging_interests',
         name: 'Emerging interests',
@@ -133,9 +133,9 @@ const OPERATION_CATEGORIES = {
       },
       {
         id: 'category_inference',
-        name: 'Category inference',
-        icon: '🧠',
-        help: 'Infer categories based on browsing behavior and domains.'
+        name: 'Category interests',
+        icon: '🏷️',
+        help: 'Infer category interests based on browsing behavior and domains.'
       },
       {
         id: 'productivity_vs_distraction',
@@ -369,7 +369,13 @@ function runLocalTopDomainsByDay(data, date) {
   const counts = {};
   data.forEach(v => {
     const ts = new Date(v.visited_at);
-    if (ts.toISOString().split('T')[0] !== date) {
+    // Extract local date string (YYYY-MM-DD) to match user's timezone
+    const year = ts.getFullYear();
+    const month = String(ts.getMonth() + 1).padStart(2, '0');
+    const day = String(ts.getDate()).padStart(2, '0');
+    const visitDateStr = `${year}-${month}-${day}`;
+
+    if (visitDateStr !== date) {
       return;
     }
     const domain = getDomain(v.url);
@@ -1680,7 +1686,7 @@ function renderCategoryInference(data, timeRangeInfo = null) {
   }
 
   let html = '<div class="result-container">';
-  html += '<div class="card"><div class="card-header">Category Inference ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += '<div class="card"><div class="card-header">Top categories ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
 
@@ -2349,6 +2355,18 @@ function setDefaultValuesForClonedSection(clonedSection, operationId) {
         input.value = today;
       }
     }
+    // Add has-value class if input has a value (for styling)
+    if (input.value) {
+      input.classList.add('has-value');
+    }
+    // Add listener to update class when value changes
+    input.addEventListener('input', function() {
+      if (this.value) {
+        this.classList.add('has-value');
+      } else {
+        this.classList.remove('has-value');
+      }
+    });
   });
 }
 
@@ -2898,6 +2916,11 @@ async function setupDateInputs() {
     input.setAttribute('min', minDate);
     input.setAttribute('max', maxDate);
 
+    // Add has-value class if input already has a value
+    if (input.value) {
+      input.classList.add('has-value');
+    }
+
     // Remove existing event listener if already set up
     if (dateInputsSetup && input.dataset.dateListenerAdded) {
       return; // Already set up
@@ -2915,6 +2938,8 @@ async function setupDateInputs() {
         // Immediately clear the invalid date
         e.target.value = '';
         previousValidValue = '';
+        // Remove has-value class
+        input.classList.remove('has-value');
 
         // Show error message
         let errorMsg = input.parentElement.querySelector('.date-error');
@@ -2940,6 +2965,8 @@ async function setupDateInputs() {
       } else if (selectedDate) {
         // Date is valid, update previous valid value
         previousValidValue = selectedDate;
+        // Add has-value class for styling
+        input.classList.add('has-value');
 
         // Clear any existing error
         const errorMsg = input.parentElement.querySelector('.date-error');
@@ -2956,6 +2983,14 @@ async function setupDateInputs() {
     // Use multiple events to catch date selection from calendar
     // 'input' fires when value changes (including calendar selection)
     input.addEventListener('input', validateAndClearInvalid);
+    // Also update has-value class on input
+    input.addEventListener('input', function() {
+      if (this.value) {
+        this.classList.add('has-value');
+      } else {
+        this.classList.remove('has-value');
+      }
+    });
     // 'change' fires when user commits the change
     input.addEventListener('change', validateAndClearInvalid);
     // 'blur' fires when input loses focus (catches manual typing)
@@ -3185,14 +3220,23 @@ function getDateRange(operation = null) {
     startDate.setHours(0, 0, 0, 0);
   }
 
-  return { startDate, endDate };
+  return { startDate, endDate, startDateValue, endDateValue };
 }
 
 // Filter visits by date range
-function filterVisitsByDateRange(visits, startDate, endDate) {
+// Uses date strings (YYYY-MM-DD) for comparison to match runLocalTopDomainsByDay logic
+// startDateStr and endDateStr are the date strings from user input (e.g., "2026-01-02")
+function filterVisitsByDateRange(visits, startDateStr, endDateStr) {
   return visits.filter(visit => {
-    const visitDate = new Date(visit.visited_at);
-    return visitDate >= startDate && visitDate <= endDate;
+    // Use the same method as runLocalTopDomainsByDay: extract local date string from visit timestamp
+    const ts = new Date(visit.visited_at);
+    const year = ts.getFullYear();
+    const month = String(ts.getMonth() + 1).padStart(2, '0');
+    const day = String(ts.getDate()).padStart(2, '0');
+    const visitDateStr = `${year}-${month}-${day}`;
+
+    // Compare date strings directly
+    return visitDateStr >= startDateStr && visitDateStr <= endDateStr;
   });
 }
 
@@ -3277,7 +3321,18 @@ async function executeQuery() {
           // Re-read date range inside callback to ensure we get current values
           if (dateRangeOperations.includes(op)) {
             const currentDateRange = getDateRange(op);
-            visits = filterVisitsByDateRange(visits, currentDateRange.startDate, currentDateRange.endDate);
+            // Use date strings for comparison, matching runLocalTopDomainsByDay logic
+            // Both operations now extract local date strings (YYYY-MM-DD) from visit timestamps
+            // So we should use the date string values directly if available, otherwise extract from Date objects
+            const formatLocalDateStr = (date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            };
+            const startDateStr = currentDateRange.startDateValue || formatLocalDateStr(currentDateRange.startDate);
+            const endDateStr = currentDateRange.endDateValue || formatLocalDateStr(currentDateRange.endDate);
+            visits = filterVisitsByDateRange(visits, startDateStr, endDateStr);
 
             // Format dates in local timezone for display (YYYY-MM-DD)
             const formatLocalDate = (date) => {
