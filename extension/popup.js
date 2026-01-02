@@ -2041,9 +2041,13 @@ function getMode() {
   });
 }
 
-// Get current mode from radio buttons
+// Get current mode from radio buttons (defaults to 'local' if mode bar is hidden)
 function getCurrentMode() {
   const modeLocal = document.getElementById("modeLocal");
+  // If mode bar is hidden, default to 'local'
+  if (!modeLocal || modeLocal.offsetParent === null) {
+    return 'local';
+  }
   return modeLocal.checked ? 'local' : 'mcp';
 }
 
@@ -2297,6 +2301,9 @@ function showOperationFormView(operationId) {
 
       // Set up validation listeners on cloned inputs
       setupValidationListenersForClonedSection(clonedSection, operationId);
+
+      // Set up date input click handlers for cloned section
+      setupDateInputClickHandlersForSection(clonedSection);
 
       validateRequiredFields();
     }, 0);
@@ -2966,8 +2973,19 @@ async function setupDateInputs() {
 
 // Setup click handlers for all date inputs to open picker on click
 function setupDateInputClickHandlers() {
-  const allDateInputs = document.querySelectorAll('input[type="date"]');
-  allDateInputs.forEach(input => {
+  const allDateInputs = document.querySelectorAll('input[type="date"], input[type="datetime-local"]');
+  setupDateInputClickHandlersForInputs(allDateInputs);
+}
+
+// Setup click handlers for date inputs in a specific section
+function setupDateInputClickHandlersForSection(section) {
+  const dateInputs = section.querySelectorAll('input[type="date"], input[type="datetime-local"]');
+  setupDateInputClickHandlersForInputs(dateInputs);
+}
+
+// Common function to set up click handlers for a collection of date inputs
+function setupDateInputClickHandlersForInputs(dateInputs) {
+  dateInputs.forEach(input => {
     // Only add if not already added
     if (!input.dataset.clickHandlerAdded) {
       input.addEventListener('click', (e) => {
