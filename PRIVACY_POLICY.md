@@ -1,6 +1,6 @@
 # Privacy Policy for Sutra Extension
 
-**Last Updated:** [Date]
+**Last Updated:** 02-Jan-2026
 
 ## Introduction
 
