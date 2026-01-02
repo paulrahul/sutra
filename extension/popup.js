@@ -221,6 +221,36 @@ function getDomain(url) {
   }
 }
 
+// Extract main domain from a domain (handles subdomains)
+// Examples: accounts.instagram.com -> instagram.com, old.reddit.com -> reddit.com
+// Handles special cases like co.uk, com.au, etc.
+function getMainDomain(domain) {
+  if (!domain) return null;
+
+  // Remove www. prefix if present
+  domain = domain.replace(/^www\./, '');
+
+  const parts = domain.split('.');
+
+  // If domain has 2 or fewer parts, return as is (e.g., example.com, localhost)
+  if (parts.length <= 2) return domain;
+
+  // Handle special two-part TLDs (e.g., co.uk, com.au, org.uk)
+  const twoPartTLDs = ['co.uk', 'com.au', 'org.uk', 'net.au', 'gov.uk', 'ac.uk', 'edu.au', 'gov.au'];
+  const lastTwoParts = parts.slice(-2).join('.');
+
+  if (twoPartTLDs.includes(lastTwoParts)) {
+    // For two-part TLDs, we need the last 3 parts (e.g., example.co.uk)
+    if (parts.length >= 3) {
+      return parts.slice(-3).join('.');
+    }
+    return domain;
+  }
+
+  // For regular domains, return last 2 parts (e.g., accounts.instagram.com -> instagram.com)
+  return parts.slice(-2).join('.');
+}
+
 function getUrlDisplayLabel(url) {
   try {
     const urlObj = new URL(url);
@@ -271,15 +301,28 @@ function getAllCategories() {
 function getCategory(domain) {
   if (!domain) return 'Other';
 
-  // First check user-defined categories (exact match first, then partial)
+  // Extract main domain from subdomain (e.g., accounts.instagram.com -> instagram.com)
+  const mainDomain = getMainDomain(domain);
+
+  // First check user-defined categories (exact match first, then main domain match)
   for (const [categoryName, domains] of Object.entries(userCategories)) {
     if (domains && Array.isArray(domains)) {
       // Check exact match first
       if (domains.includes(domain)) {
         return categoryName;
       }
-      // Then check partial matches
+      // Check if main domain matches
+      if (mainDomain && domains.includes(mainDomain)) {
+        return categoryName;
+      }
+      // Then check partial matches (for backwards compatibility)
       for (const catDomain of domains) {
+        const catMainDomain = getMainDomain(catDomain);
+        // Check if main domains match
+        if (mainDomain && catMainDomain && mainDomain === catMainDomain) {
+          return categoryName;
+        }
+        // Also check if domain includes category domain or vice versa
         if (domain.includes(catDomain) || catDomain.includes(domain)) {
           return categoryName;
         }
@@ -295,8 +338,18 @@ function getCategory(domain) {
       if (domains.includes(domain)) {
         return categoryName;
       }
-      // Then check partial matches
+      // Check if main domain matches
+      if (mainDomain && domains.includes(mainDomain)) {
+        return categoryName;
+      }
+      // Then check partial matches (for backwards compatibility)
       for (const catDomain of domains) {
+        const catMainDomain = getMainDomain(catDomain);
+        // Check if main domains match
+        if (mainDomain && catMainDomain && mainDomain === catMainDomain) {
+          return categoryName;
+        }
+        // Also check if domain includes category domain or vice versa
         if (domain.includes(catDomain) || catDomain.includes(domain)) {
           return categoryName;
         }
@@ -909,6 +962,7 @@ function runLocalCategoryInference(data) {
         category,
         visit_count: count,
         unique_domains: categoryDomains[category].size,
+        unique_domains_list: Array.from(categoryDomains[category]).sort(),
         percentage: ((count / data.length) * 100).toFixed(2) + '%'
       }))
       .sort((a, b) => b.visit_count - a.visit_count)
@@ -1690,8 +1744,11 @@ function renderCategoryInference(data, timeRangeInfo = null) {
 
   const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
 
-  data.categories.forEach(category => {
+  data.categories.forEach((category, index) => {
     const percentage = maxCount > 0 ? (category.visit_count / maxCount) * 100 : 0;
+    const domainsList = category.unique_domains_list || [];
+    const domainsListText = domainsList.length > 0 ? domainsList.join(', ') : 'No domains';
+
     html += `
       <div style="margin-bottom: 16px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -1701,8 +1758,16 @@ function renderCategoryInference(data, timeRangeInfo = null) {
         <div class="bar-container">
           <div class="bar-fill" style="width: ${percentage}%"></div>
         </div>
-        <div style="margin-top: 4px; font-size: 12px; color: #6c757d;">
-          ${category.unique_domains} unique domains
+        <div style="margin-top: 4px; font-size: 12px; color: #6c757d; position: relative; display: inline-block;">
+          <span class="unique-domains-hover" data-category-index="${index}" style="cursor: pointer; text-decoration: underline; text-decoration-style: dotted;">
+            ${category.unique_domains} unique domains
+          </span>
+        </div>
+        <div class="domain-tooltip" id="tooltip-${index}" style="display: none;">
+          <button class="domain-tooltip-close" data-tooltip-id="${index}">×</button>
+          <div class="domain-tooltip-content">
+            ${domainsListText}
+          </div>
         </div>
       </div>
     `;
@@ -1710,6 +1775,76 @@ function renderCategoryInference(data, timeRangeInfo = null) {
 
   html += '</div></div>';
   return html;
+}
+
+// Setup tooltip handlers for category inference unique domains
+function setupCategoryInferenceTooltips() {
+  const output = document.getElementById('output');
+  if (!output) return;
+
+  output.querySelectorAll('.unique-domains-hover').forEach(hoverElement => {
+    const tooltipId = hoverElement.dataset.categoryIndex;
+    const tooltip = output.querySelector(`#tooltip-${tooltipId}`);
+
+    if (!tooltip) return;
+
+    // Move tooltip to be a sibling of the hover element's parent for better positioning
+    const parentContainer = hoverElement.closest('.card');
+    if (parentContainer && !parentContainer.contains(tooltip)) {
+      parentContainer.appendChild(tooltip);
+    }
+
+    let hideTimeout;
+
+    hoverElement.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimeout);
+
+      // Show tooltip first to get its dimensions
+      tooltip.style.display = 'block';
+      tooltip.style.visibility = 'hidden';
+
+      // Position tooltip relative to viewport
+      const rect = hoverElement.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+
+      // Calculate position - center above the hover element
+      const left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+      const top = rect.top - tooltipRect.height - 12;
+
+      // Ensure tooltip stays within viewport bounds
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const finalLeft = Math.max(10, Math.min(left, viewportWidth - tooltipRect.width - 10));
+      const finalTop = Math.max(10, Math.min(top, viewportHeight - tooltipRect.height - 10));
+
+      tooltip.style.left = `${finalLeft}px`;
+      tooltip.style.top = `${finalTop}px`;
+      tooltip.style.visibility = 'visible';
+    });
+
+    hoverElement.addEventListener('mouseleave', () => {
+      hideTimeout = setTimeout(() => {
+        tooltip.style.display = 'none';
+      }, 100);
+    });
+
+    tooltip.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimeout);
+    });
+
+    tooltip.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
+
+    // Setup close button handler
+    const closeButton = tooltip.querySelector('.domain-tooltip-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tooltip.style.display = 'none';
+      });
+    }
+  });
 }
 
 function renderRepeatedPatterns(data, timeRangeInfo = null) {
@@ -1996,6 +2131,7 @@ function renderResult(operation, result, timeRangeInfo = null) {
       break;
     case 'category_inference':
       output.innerHTML = renderCategoryInference(result, timeRangeInfo);
+      setupCategoryInferenceTooltips();
       break;
     case 'productivity_vs_distraction':
       output.innerHTML = renderProductivityVsDistraction(result, timeRangeInfo);
@@ -2640,10 +2776,99 @@ function showSettingsView() {
   renderSettingsView();
 }
 
+// Get all unique domains from history
+async function getAllHistoryDomains() {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      {
+        type: "FETCH_HISTORY",
+        startTime: Date.now() - 1000 * 60 * 60 * 24 * 365, // Last year
+        maxResults: 50000
+      },
+      (response) => {
+        const domainSet = new Set();
+        if (response && response.visits) {
+          response.visits.forEach(visit => {
+            const domain = getDomain(visit.url);
+            if (domain) {
+              domainSet.add(domain);
+            }
+          });
+        }
+        resolve(Array.from(domainSet).sort());
+      }
+    );
+  });
+}
+
+// Get all categorized domains (from both system and user categories)
+// Returns a Set that includes both exact domains and their main domains
+function getAllCategorizedDomains() {
+  const categorizedDomains = new Set();
+  const categorizedMainDomains = new Set();
+
+  // Add domains from system categories
+  Object.keys(SYSTEM_CATEGORIES).forEach(categoryName => {
+    const domains = getSystemCategoryWithOverrides(categoryName);
+    domains.forEach(domain => {
+      categorizedDomains.add(domain);
+      const mainDomain = getMainDomain(domain);
+      if (mainDomain) {
+        categorizedMainDomains.add(mainDomain);
+      }
+    });
+  });
+
+  // Add domains from user categories
+  Object.values(userCategories).forEach(domains => {
+    if (Array.isArray(domains)) {
+      domains.forEach(domain => {
+        categorizedDomains.add(domain);
+        const mainDomain = getMainDomain(domain);
+        if (mainDomain) {
+          categorizedMainDomains.add(mainDomain);
+        }
+      });
+    }
+  });
+
+  // Return a function that checks if a domain is categorized
+  // (either exact match or main domain match)
+  return {
+    has: (domain) => {
+      if (!domain) return false;
+      // Check exact match
+      if (categorizedDomains.has(domain)) return true;
+      // Check main domain match
+      const mainDomain = getMainDomain(domain);
+      return mainDomain ? categorizedMainDomains.has(mainDomain) : false;
+    },
+    // Also expose the sets for backwards compatibility if needed
+    exactDomains: categorizedDomains,
+    mainDomains: categorizedMainDomains
+  };
+}
+
+// Get uncategorized domains (domains in history but not in any category)
+async function getUncategorizedDomains() {
+  const allDomains = await getAllHistoryDomains();
+  const categorizedDomains = getAllCategorizedDomains();
+
+  // Filter out domains that are categorized (either exact match or main domain match)
+  return allDomains.filter(domain => !categorizedDomains.has(domain));
+}
+
 // Render settings view with system and user categories
-function renderSettingsView() {
+async function renderSettingsView() {
   const categoriesList = document.getElementById('categoriesList');
   categoriesList.innerHTML = '';
+
+  // Clear selection when re-rendering
+  selectedDomains.clear();
+  const existingActionBar = document.getElementById('floatingActionBar');
+  if (existingActionBar) {
+    existingActionBar.remove();
+  }
 
   // First render system categories
   Object.keys(SYSTEM_CATEGORIES).forEach(categoryName => {
@@ -2652,55 +2877,113 @@ function renderSettingsView() {
     renderCategoryItem(categoriesList, categoryName, domains, isSystem);
   });
 
-  // Then render user-defined categories
+  // Then render user-defined categories (skip "Others" as it's handled separately)
   Object.entries(userCategories).forEach(([categoryName, domains]) => {
+    // Skip "Others" category - it's always rendered as a special dynamic category
+    if (categoryName === 'Others') {
+      return;
+    }
     const isSystem = false;
     renderCategoryItem(categoriesList, categoryName, domains, isSystem);
   });
 
-  if (Object.keys(SYSTEM_CATEGORIES).length === 0 && Object.keys(userCategories).length === 0) {
+  // Render "Others" category with uncategorized domains (always render this special category)
+  const uncategorizedDomains = await getUncategorizedDomains();
+  if (uncategorizedDomains.length > 0) {
+    renderCategoryItem(categoriesList, 'Others', uncategorizedDomains, false, true);
+  }
+
+  if (Object.keys(SYSTEM_CATEGORIES).length === 0 && Object.keys(userCategories).length === 0 && uncategorizedDomains.length === 0) {
     categoriesList.innerHTML = '<div style="color: #6c757d; font-size: 13px; padding: 20px; text-align: center;">No categories yet. Add one below!</div>';
   }
 
   // Setup handlers after rendering
   setupCategoryItemHandlers();
+  setupDragAndDrop();
 }
 
+// Store selected domains for bulk operations
+let selectedDomains = new Set();
+let allUncategorizedDomains = [];
+
 // Render a single category item
-function renderCategoryItem(container, categoryName, domains, isSystem) {
+function renderCategoryItem(container, categoryName, domains, isSystem, isOthers = false) {
   const categoryItem = document.createElement('div');
   categoryItem.className = 'category-item';
   categoryItem.dataset.categoryName = categoryName;
   categoryItem.dataset.isSystem = isSystem;
+  categoryItem.dataset.isOthers = isOthers;
+  if (isOthers) {
+    categoryItem.classList.add('category-item-others');
+    // Store full list for filtering
+    allUncategorizedDomains = Array.isArray(domains) ? [...domains] : [];
+  }
 
   const domainList = Array.isArray(domains) ? domains : [];
-  const domainTags = domainList.map(domain => `
-    <span class="domain-tag">
-      ${domain}
-      <span class="remove" data-domain="${domain}">×</span>
-    </span>
-  `).join('');
 
-  const systemBadge = isSystem ? '<span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">System</span>' : '';
+  // For Others category, use checkboxes and search
+  if (isOthers) {
+    const domainTags = domainList.map(domain => `
+      <label class="domain-tag-selectable">
+        <input type="checkbox" class="domain-checkbox" data-domain="${domain}" />
+        <span class="domain-tag-text">${domain}</span>
+      </label>
+    `).join('');
 
-  categoryItem.innerHTML = `
-    <div class="category-item-header">
-      <div class="category-item-name">${categoryName}${systemBadge}</div>
-      <div class="category-item-actions">
-        <button class="btn-small" onclick="editCategoryName('${categoryName}', ${isSystem})">Edit Name</button>
-        ${!isSystem ? `<button class="btn-small" onclick="deleteCategory('${categoryName}')">Delete</button>` : ''}
+    const systemBadge = isSystem ? '<span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">System</span>' : '';
+    const othersBadge = isOthers ? '<span style="background: #fff3cd; color: #856404; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">Uncategorized</span>' : '';
+    const domainCount = domainList.length;
+
+    categoryItem.innerHTML = `
+      <div class="category-item-header">
+        <div class="category-item-name">${categoryName}${systemBadge}${othersBadge} <span style="color: #6b7280; font-size: 12px; font-weight: 500;">(${domainCount} domains)</span></div>
+        <div class="category-item-actions">
+          <button class="btn-small" id="selectAllOthers" style="display: none;">Select All</button>
+          <button class="btn-small" id="deselectAllOthers" style="display: none;">Deselect All</button>
+        </div>
       </div>
-    </div>
-    <div class="domain-list">
-      ${domainTags || '<span style="color: #6c757d; font-size: 12px;">No domains yet</span>'}
-    </div>
-    <div class="add-domain-input">
-      <input type="text" placeholder="Add domain (e.g., example.com)" data-category="${categoryName}" data-is-system="${isSystem}" />
-      <button class="btn-small btn-primary" onclick="addDomainToCategory('${categoryName}', this.previousElementSibling, ${isSystem})">Add Domain</button>
-    </div>
-  `;
+      <div class="others-search-container">
+        <input type="text" class="others-search-input" placeholder="🔍 Search domains..." id="othersSearchInput" />
+      </div>
+      <div class="domain-list others-domain-list" data-category-name="${categoryName}" data-is-system="${isSystem}">
+        ${domainTags || '<span style="color: #6c757d; font-size: 12px;">No domains yet</span>'}
+      </div>
+    `;
+  } else {
+    // Regular categories use the original design
+    const domainTags = domainList.map(domain => `
+      <span class="domain-tag" draggable="true" data-domain="${domain}">
+        ${domain}
+        <span class="remove" data-domain="${domain}">×</span>
+      </span>
+    `).join('');
+
+    const systemBadge = isSystem ? '<span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">System</span>' : '';
+
+    categoryItem.innerHTML = `
+      <div class="category-item-header">
+        <div class="category-item-name">${categoryName}${systemBadge}</div>
+        <div class="category-item-actions">
+          <button class="btn-small btn-edit-category" data-category-name="${categoryName}" data-is-system="${isSystem}">Edit Name</button>
+          ${!isSystem ? `<button class="btn-small btn-delete-category" data-category-name="${categoryName}">Delete</button>` : ''}
+        </div>
+      </div>
+      <div class="domain-list" data-category-name="${categoryName}" data-is-system="${isSystem}">
+        ${domainTags || '<span style="color: #6c757d; font-size: 12px;">No domains yet</span>'}
+      </div>
+      <div class="add-domain-input">
+        <input type="text" placeholder="Add domain (e.g., example.com)" data-category="${categoryName}" data-is-system="${isSystem}" />
+        <button class="btn-small btn-primary btn-add-domain" data-category-name="${categoryName}" data-is-system="${isSystem}">Add Domain</button>
+      </div>
+    `;
+  }
 
   container.appendChild(categoryItem);
+
+  // Setup Others category specific handlers
+  if (isOthers) {
+    setupOthersCategoryHandlers(categoryItem);
+  }
 }
 
 // Setup handlers for category items
@@ -2710,6 +2993,7 @@ function setupCategoryItemHandlers() {
   // Setup remove domain handlers
   categoriesList.querySelectorAll('.domain-tag .remove').forEach(removeBtn => {
     removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const domain = e.target.dataset.domain;
       const categoryItem = e.target.closest('.category-item');
       const categoryName = categoryItem.dataset.categoryName;
@@ -2718,7 +3002,7 @@ function setupCategoryItemHandlers() {
     });
   });
 
-  // Setup add domain handlers (Enter key)
+  // Setup add domain handlers (Enter key and button click)
   categoriesList.querySelectorAll('.add-domain-input input').forEach(input => {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -2727,6 +3011,369 @@ function setupCategoryItemHandlers() {
         const addBtn = input.nextElementSibling;
         addDomainToCategory(categoryName, input, isSystem);
       }
+    });
+  });
+
+  // Setup add domain button handlers
+  categoriesList.querySelectorAll('.btn-add-domain').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const categoryName = btn.dataset.categoryName;
+      const isSystem = btn.dataset.isSystem === 'true';
+      const input = btn.previousElementSibling;
+      addDomainToCategory(categoryName, input, isSystem);
+    });
+  });
+
+  // Setup edit category name button handlers
+  categoriesList.querySelectorAll('.btn-edit-category').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const categoryName = btn.dataset.categoryName;
+      const isSystem = btn.dataset.isSystem === 'true';
+      editCategoryName(categoryName, isSystem);
+    });
+  });
+
+  // Setup delete category button handlers
+  categoriesList.querySelectorAll('.btn-delete-category').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const categoryName = btn.dataset.categoryName;
+      deleteCategory(categoryName);
+    });
+  });
+}
+
+// Setup handlers for Others category (search, checkboxes, bulk actions)
+function setupOthersCategoryHandlers(categoryItem) {
+  const searchInput = categoryItem.querySelector('.others-search-input');
+  const domainList = categoryItem.querySelector('.others-domain-list');
+  const selectAllBtn = categoryItem.querySelector('#selectAllOthers');
+  const deselectAllBtn = categoryItem.querySelector('#deselectAllOthers');
+
+  // Search/filter functionality
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase().trim();
+      filterOthersDomains(domainList, searchTerm);
+    });
+  }
+
+  // Checkbox change handlers
+  domainList.querySelectorAll('.domain-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const domain = e.target.dataset.domain;
+      if (e.target.checked) {
+        selectedDomains.add(domain);
+      } else {
+        selectedDomains.delete(domain);
+      }
+      updateFloatingActionBar();
+      updateSelectAllButtons(selectAllBtn, deselectAllBtn, domainList);
+    });
+  });
+
+  // Select All / Deselect All buttons
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      const visibleCheckboxes = domainList.querySelectorAll('.domain-checkbox:not([style*="display: none"])');
+      visibleCheckboxes.forEach(cb => {
+        cb.checked = true;
+        selectedDomains.add(cb.dataset.domain);
+      });
+      updateFloatingActionBar();
+      updateSelectAllButtons(selectAllBtn, deselectAllBtn, domainList);
+    });
+  }
+
+  if (deselectAllBtn) {
+    deselectAllBtn.addEventListener('click', () => {
+      const visibleCheckboxes = domainList.querySelectorAll('.domain-checkbox:not([style*="display: none"])');
+      visibleCheckboxes.forEach(cb => {
+        cb.checked = false;
+        selectedDomains.delete(cb.dataset.domain);
+      });
+      updateFloatingActionBar();
+      updateSelectAllButtons(selectAllBtn, deselectAllBtn, domainList);
+    });
+  }
+
+  // Initial update of Select All buttons
+  updateSelectAllButtons(selectAllBtn, deselectAllBtn, domainList);
+}
+
+// Filter domains in Others category based on search term
+function filterOthersDomains(domainList, searchTerm) {
+  const checkboxes = domainList.querySelectorAll('.domain-tag-selectable');
+  let visibleCount = 0;
+
+  checkboxes.forEach(label => {
+    const domain = label.querySelector('.domain-checkbox').dataset.domain;
+    const matches = !searchTerm || domain.toLowerCase().includes(searchTerm);
+
+    if (matches) {
+      label.style.display = '';
+      visibleCount++;
+    } else {
+      label.style.display = 'none';
+    }
+  });
+
+  // Show message if no results
+  let noResultsMsg = domainList.querySelector('.no-results-message');
+  if (visibleCount === 0 && searchTerm) {
+    if (!noResultsMsg) {
+      noResultsMsg = document.createElement('div');
+      noResultsMsg.className = 'no-results-message';
+      noResultsMsg.style.cssText = 'color: #6c757d; font-size: 12px; padding: 20px; text-align: center;';
+      domainList.appendChild(noResultsMsg);
+    }
+    noResultsMsg.textContent = `No domains match "${searchTerm}"`;
+  } else if (noResultsMsg) {
+    noResultsMsg.remove();
+  }
+
+  // Update Select All buttons after filtering
+  const categoryItem = domainList.closest('.category-item');
+  if (categoryItem) {
+    const selectAllBtn = categoryItem.querySelector('#selectAllOthers');
+    const deselectAllBtn = categoryItem.querySelector('#deselectAllOthers');
+    updateSelectAllButtons(selectAllBtn, deselectAllBtn, domainList);
+  }
+}
+
+// Update Select All / Deselect All button visibility
+function updateSelectAllButtons(selectAllBtn, deselectAllBtn, domainList) {
+  if (!selectAllBtn || !deselectAllBtn) return;
+
+  const visibleCheckboxes = Array.from(domainList.querySelectorAll('.domain-checkbox:not([style*="display: none"])'));
+  const checkedCount = visibleCheckboxes.filter(cb => cb.checked).length;
+
+  if (visibleCheckboxes.length > 0) {
+    selectAllBtn.style.display = checkedCount < visibleCheckboxes.length ? 'inline-block' : 'none';
+    deselectAllBtn.style.display = checkedCount > 0 ? 'inline-block' : 'none';
+  } else {
+    selectAllBtn.style.display = 'none';
+    deselectAllBtn.style.display = 'none';
+  }
+}
+
+// Update floating action bar visibility and content
+function updateFloatingActionBar() {
+  let actionBar = document.getElementById('floatingActionBar');
+
+  if (selectedDomains.size === 0) {
+    if (actionBar) {
+      actionBar.remove();
+    }
+    return;
+  }
+
+  // Create action bar if it doesn't exist
+  if (!actionBar) {
+    actionBar = document.createElement('div');
+    actionBar.id = 'floatingActionBar';
+    actionBar.className = 'floating-action-bar';
+    document.getElementById('settingsContainer').appendChild(actionBar);
+  }
+
+  // Get all available categories (system + user)
+  const allCategories = [];
+  Object.keys(SYSTEM_CATEGORIES).forEach(cat => {
+    allCategories.push({ name: cat, isSystem: true });
+  });
+  Object.keys(userCategories).forEach(cat => {
+    if (cat !== 'Others') {
+      allCategories.push({ name: cat, isSystem: false });
+    }
+  });
+
+  const selectedCount = selectedDomains.size;
+  const categoryButtons = allCategories.map(cat =>
+    `<button class="floating-category-btn" data-category="${cat.name}" data-is-system="${cat.isSystem}">${cat.name}</button>`
+  ).join('');
+
+  actionBar.innerHTML = `
+    <div class="floating-action-bar-content">
+      <span class="floating-action-bar-text">${selectedCount} domain${selectedCount > 1 ? 's' : ''} selected</span>
+      <div class="floating-category-buttons">
+        ${categoryButtons}
+      </div>
+      <button class="floating-cancel-btn" id="cancelSelection">Cancel</button>
+    </div>
+  `;
+
+  // Setup category button handlers
+  actionBar.querySelectorAll('.floating-category-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const categoryName = e.target.dataset.category;
+      const isSystem = e.target.dataset.isSystem === 'true';
+      moveSelectedDomainsToCategory(categoryName, isSystem);
+    });
+  });
+
+  // Setup cancel button
+  actionBar.querySelector('#cancelSelection').addEventListener('click', () => {
+    clearSelection();
+  });
+}
+
+// Move selected domains to a category
+function moveSelectedDomainsToCategory(categoryName, isSystem) {
+  const domainsToMove = Array.from(selectedDomains);
+
+  if (domainsToMove.length === 0) return;
+
+  // Move each domain directly (without triggering individual renders)
+  domainsToMove.forEach(domain => {
+    if (isSystem) {
+      // For system categories, track additions in overrides
+      if (!systemCategoryOverrides[categoryName]) {
+        systemCategoryOverrides[categoryName] = { added: [], removed: [] };
+      }
+      const currentDomains = getSystemCategoryWithOverrides(categoryName);
+      if (!currentDomains.includes(domain)) {
+        systemCategoryOverrides[categoryName].added.push(domain);
+      }
+    } else {
+      // For user categories
+      if (!userCategories[categoryName]) {
+        userCategories[categoryName] = [];
+      }
+      if (!userCategories[categoryName].includes(domain)) {
+        userCategories[categoryName].push(domain);
+      }
+    }
+  });
+
+  // Save once after all moves
+  saveUserCategories();
+
+  // Clear selection and refresh view
+  clearSelection();
+  renderSettingsView();
+}
+
+// Clear all selections
+function clearSelection() {
+  selectedDomains.clear();
+  const categoriesList = document.getElementById('categoriesList');
+  categoriesList.querySelectorAll('.domain-checkbox').forEach(cb => {
+    cb.checked = false;
+  });
+  updateFloatingActionBar();
+
+  // Update Select All buttons
+  const othersCategory = categoriesList.querySelector('.category-item-others');
+  if (othersCategory) {
+    const domainList = othersCategory.querySelector('.others-domain-list');
+    const selectAllBtn = othersCategory.querySelector('#selectAllOthers');
+    const deselectAllBtn = othersCategory.querySelector('#deselectAllOthers');
+    updateSelectAllButtons(selectAllBtn, deselectAllBtn, domainList);
+  }
+}
+
+// Setup drag and drop functionality
+function setupDragAndDrop() {
+  const categoriesList = document.getElementById('categoriesList');
+
+  // Make all domain tags draggable (except remove buttons and Others category)
+  // Skip Others category - it uses checkboxes instead
+  categoriesList.querySelectorAll('.category-item:not(.category-item-others) .domain-tag').forEach(tag => {
+    // Prevent drag when clicking on remove button
+    const removeBtn = tag.querySelector('.remove');
+    if (removeBtn) {
+      removeBtn.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      });
+      removeBtn.style.pointerEvents = 'auto';
+      removeBtn.style.cursor = 'pointer';
+    }
+
+    tag.addEventListener('dragstart', (e) => {
+      // Don't start drag if clicking on remove button
+      if (e.target.classList.contains('remove')) {
+        e.preventDefault();
+        return;
+      }
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', tag.dataset.domain);
+      tag.classList.add('dragging');
+    });
+
+    tag.addEventListener('dragend', (e) => {
+      tag.classList.remove('dragging');
+      // Remove drag-over class from all drop zones
+      categoriesList.querySelectorAll('.drop-zone, .domain-list').forEach(zone => {
+        zone.classList.remove('drag-over');
+      });
+    });
+  });
+
+  // Setup drop zones (all category domain lists)
+  categoriesList.querySelectorAll('.domain-list').forEach(dropZone => {
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      // Only remove drag-over if we're actually leaving the drop zone
+      const rect = dropZone.getBoundingClientRect();
+      const x = e.clientX;
+      const y = e.clientY;
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+        dropZone.classList.remove('drag-over');
+      }
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+
+      const draggedDomain = e.dataTransfer.getData('text/plain');
+      const targetCategoryName = dropZone.dataset.categoryName;
+      const targetIsSystem = dropZone.dataset.isSystem === 'true';
+
+      // Find the source category
+      const draggedTag = categoriesList.querySelector(`.domain-tag[data-domain="${draggedDomain}"].dragging`);
+      if (!draggedTag) return;
+
+      const sourceCategoryItem = draggedTag.closest('.category-item');
+      const sourceCategoryName = sourceCategoryItem.dataset.categoryName;
+      const sourceIsSystem = sourceCategoryItem.dataset.isSystem === 'true';
+      const sourceIsOthers = sourceCategoryItem.dataset.isOthers === 'true';
+
+      // Don't do anything if dropping on the same category
+      if (sourceCategoryName === targetCategoryName) {
+        return;
+      }
+
+      // Check if domain already exists in target
+      let targetDomains = [];
+      if (targetIsSystem) {
+        targetDomains = getSystemCategoryWithOverrides(targetCategoryName);
+      } else {
+        targetDomains = userCategories[targetCategoryName] || [];
+      }
+
+      if (targetDomains.includes(draggedDomain)) {
+        // Domain already in target category, just remove from source if not Others
+        if (!sourceIsOthers) {
+          removeDomainFromCategory(sourceCategoryName, draggedDomain, sourceIsSystem);
+        }
+        return;
+      }
+
+      // Remove from source category first (if not Others)
+      if (!sourceIsOthers) {
+        removeDomainFromCategory(sourceCategoryName, draggedDomain, sourceIsSystem);
+      }
+
+      // Add to target category
+      // Create a temporary input element to use addDomainToCategory
+      const tempInput = document.createElement('input');
+      tempInput.value = draggedDomain;
+      addDomainToCategory(targetCategoryName, tempInput, targetIsSystem);
     });
   });
 }
@@ -2845,7 +3492,14 @@ function addNewCategory() {
     return;
   }
 
-  if (userCategories[categoryName]) {
+  // "Others" is a reserved category name (used for uncategorized domains)
+  if (categoryName === 'Others') {
+    alert('"Others" is a reserved category name and cannot be used. It is automatically created for uncategorized domains.');
+    return;
+  }
+
+  // Check both user categories and system categories (case-sensitive)
+  if (userCategories[categoryName] || SYSTEM_CATEGORIES[categoryName]) {
     alert('A category with this name already exists');
     return;
   }
