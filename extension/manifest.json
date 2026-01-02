@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Sutra",
   "version": "0.1.0",
-  "description": "Explore browser history via MCP server",
+  "description": "Insights from your browsing patterns",
   "permissions": ["history", "storage"],
   "background": {
     "service_worker": "background.js"
