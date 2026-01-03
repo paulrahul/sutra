@@ -4262,11 +4262,11 @@ const sampleQueries = [
   "What topics dominate my browsing lately?",
   "Which subjects do I keep returning to?",
   "List the links that I visited related to ethnic metallic jewellery",
-  "Find that Italian website I visited which has traditional recipes ",
-  "list the links which have been long pending to be read",
   "What kind of content distracts me?",
+  "Find that Italian website I visited which has traditional recipes ",
   "What topics have I stopped caring about?",
   "How much time do I spend on politics? give detailed report.",
+  "list the links which have been long pending to be read",
   "What do I spend more time on than I realize?",
   "How intentional is my browsing?"
 ];
