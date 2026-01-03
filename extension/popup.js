@@ -375,14 +375,22 @@ function normalizeUrl(url) {
   try {
     const urlObj = new URL(url);
     // Normalize scheme to lowercase
-    urlObj.protocol = urlObj.protocol.toLowerCase();
-    // Normalize hostname to lowercase and remove www. prefix
-    urlObj.hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
-    // Remove trailing slash from path (except for root path)
-    if (urlObj.pathname !== '/' && urlObj.pathname.endsWith('/')) {
-      urlObj.pathname = urlObj.pathname.slice(0, -1);
+    let scheme = urlObj.protocol.toLowerCase();
+    // Remove trailing colon from scheme (e.g., "https:" -> "https")
+    if (scheme.endsWith(':')) {
+      scheme = scheme.slice(0, -1);
     }
-    return urlObj.toString();
+    // Normalize hostname to lowercase and remove www. prefix
+    let hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
+    // Remove trailing slash from path (except for root path)
+    let pathname = urlObj.pathname;
+    if (pathname !== '/' && pathname.endsWith('/')) {
+      pathname = pathname.slice(0, -1);
+    }
+    // Remove query string and fragment to group URLs that differ only by these
+    // This prevents the same page from appearing multiple times with different query params
+    const normalized = `${scheme}://${hostname}${pathname}`;
+    return normalized;
   } catch (e) {
     // If parsing fails, return original URL
     return url;

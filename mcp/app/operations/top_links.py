@@ -13,12 +13,11 @@ def normalize_url(url: str) -> str:
         netloc = parsed.netloc.lower().replace('www.', '') if parsed.netloc else ''
         # Remove trailing slash from path (except for root path)
         path = parsed.path.rstrip('/') if parsed.path and parsed.path != '/' else parsed.path
-        # Keep query and fragment as-is (they might be meaningful)
-        query = parsed.query
-        fragment = parsed.fragment
+        # Remove query string and fragment to group URLs that differ only by these
+        # This prevents the same page from appearing multiple times with different query params
 
-        # Reconstruct URL
-        normalized = urlunparse((scheme, netloc, path, parsed.params, query, fragment))
+        # Reconstruct URL without query and fragment
+        normalized = urlunparse((scheme, netloc, path, parsed.params, '', ''))
         return normalized
     except Exception:
         # If parsing fails, return original URL
