@@ -2180,60 +2180,16 @@ function renderResult(operation, result, timeRangeInfo = null) {
   }
 }
 
-// Get mode preference
-function getMode() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(['mode'], (result) => {
-      // Default to 'local' if not set
-      const savedMode = result.mode || 'local';
-      resolve(savedMode);
-    });
-  });
-}
 
 // Get current mode from radio buttons (defaults to 'local' if mode bar is hidden)
 function getCurrentMode() {
-  const modeLocal = document.getElementById("modeLocal");
-  // If mode bar is hidden, default to 'local'
-  if (!modeLocal || modeLocal.offsetParent === null) {
-    return 'local';
-  }
-  return modeLocal.checked ? 'local' : 'mcp';
-}
-
-// Save mode preference
-function saveMode(mode) {
-  chrome.storage.local.set({ mode });
-}
-
-// Get MCP server URL from storage
-function getMcpServerUrl() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(['mcpServerUrl'], (result) => {
-      resolve(result.mcpServerUrl || null);
-    });
-  });
-}
-
-// Save MCP server URL to storage
-function saveMcpServerUrl(url) {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ mcpServerUrl: url }, () => {
-      resolve();
-    });
-  });
+  // Always return 'local' mode since MCP mode is removed
+  return 'local';
 }
 
 // Validate required fields for the current operation
 function validateRequiredFields() {
-  const mode = getCurrentMode();
-  let op;
-
-  if (mode === 'local') {
-    op = currentOperation;
-  } else {
-    op = document.getElementById("operation").value;
-  }
+  const op = currentOperation;
 
   const sendButton = document.getElementById("send");
 
@@ -2265,16 +2221,8 @@ function validateRequiredFields() {
 
 // Show/hide fields based on selected operation and enable/disable button
 function updateFieldsVisibility() {
-  const mode = getCurrentMode();
-  let op;
-
-  if (mode === 'local') {
-    // In local mode, use currentOperation from navigation state
-    op = currentOperation;
-  } else {
-    // In MCP mode, use the select dropdown
-    op = document.getElementById("operation").value;
-  }
+  // Use currentOperation from navigation state
+  const op = currentOperation;
 
   const sections = document.querySelectorAll(".section[data-operation]");
 
@@ -2587,137 +2535,17 @@ function clearAllInputs() {
 
 async function updateNavigationForMode(mode) {
   const localNav = document.getElementById('localModeNavigation');
-  const mcpNav = document.getElementById('mcpModeNavigation');
-  const sendButton = document.getElementById('send');
 
-  if (mode === 'local') {
-    localNav.style.display = 'block';
-    mcpNav.style.display = 'none';
-    showCategoriesView();
-  } else {
-    // MCP mode: Keep showing local navigation, but operations will run against MCP server
-    localNav.style.display = 'block';
-    mcpNav.style.display = 'none';
-    // Don't change the view - keep whatever view is currently shown
-    // Operations will be executed against MCP server when run
-
-    // Check if MCP server is configured
-    const mcpServerUrl = await getMcpServerUrl();
-    if (!mcpServerUrl) {
-      // Show MCP configuration message in the output area
-      const output = document.getElementById("output");
-      output.innerHTML = `
-        <div class="card" style="background: #fff3cd; border-color: #ffc107;">
-          <div class="card-header" style="color: #856404;">⚠️ MCP Server Not Configured</div>
-          <div class="card-content" style="color: #856404; margin-top: 12px;">
-            <p style="margin-bottom: 12px;">Please configure your MCP server URL before using MCP mode.</p>
-            <div class="form-group" style="margin-top: 16px;">
-              <label>MCP Server URL <span class="required">*</span></label>
-              <input type="text" id="mcpServerUrlInput" placeholder="http://localhost:8082" style="margin-bottom: 8px;" />
-              <button class="btn-small btn-primary" id="saveMcpServerBtnInline" style="width: 100%;">Save MCP Server URL</button>
-            </div>
-          </div>
-        </div>
-      `;
-
-      // Setup save button handler
-      const saveBtn = document.getElementById('saveMcpServerBtnInline');
-      const urlInput = document.getElementById('mcpServerUrlInput');
-      if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-          const url = urlInput.value.trim();
-          if (!url) {
-            alert('Please enter a valid MCP server URL');
-            return;
-          }
-          await saveMcpServerUrl(url);
-          // Refresh the view
-          updateNavigationForMode('mcp');
-        });
-      }
-    }
-
-    // Show button for MCP mode (it will be enabled/disabled based on operation selection)
-    if (sendButton) {
-      sendButton.style.display = 'block';
-    }
-  }
+  // Always show local navigation (MCP mode removed)
+  localNav.style.display = 'block';
+  showCategoriesView();
 }
 
 // Initialize mode radio buttons
-async function initializeModeRadio() {
-  const modeLocal = document.getElementById("modeLocal");
-  const modeMCP = document.getElementById("modeMCP");
-  const currentMode = await getMode();
-
-  // Set the checked state based on saved preference
-  if (currentMode === 'local') {
-    modeLocal.checked = true;
-  } else {
-    modeMCP.checked = true;
-  }
-
-  // Update navigation based on initial mode
-  updateNavigationForMode(currentMode);
-
-  // Add event listeners to both radio buttons
-  modeLocal.addEventListener('change', () => {
-    if (modeLocal.checked) {
-      saveMode('local');
-      updateNavigationForMode('local');
-    }
-  });
-
-  modeMCP.addEventListener('change', () => {
-    if (modeMCP.checked) {
-      saveMode('mcp');
-      updateNavigationForMode('mcp');
-    }
-  });
-
-  // Setup MCP server configuration UI handlers
-  const saveMcpServerBtn = document.getElementById('saveMcpServerBtn');
-  const mcpServerUrlInput = document.getElementById('mcpServerUrl');
-  if (saveMcpServerBtn && mcpServerUrlInput) {
-    saveMcpServerBtn.addEventListener('click', async () => {
-      const url = mcpServerUrlInput.value.trim();
-      if (!url) {
-        alert('Please enter a valid MCP server URL');
-        return;
-      }
-      await saveMcpServerUrl(url);
-      // Refresh MCP mode view
-      const currentMode = getCurrentMode();
-      if (currentMode === 'mcp') {
-        updateNavigationForMode('mcp');
-      }
-    });
-  }
-
-  // Check MCP server configuration on load
-  checkMcpServerConfiguration();
-}
-
-// Check MCP server configuration and update UI accordingly
-async function checkMcpServerConfiguration() {
-  const mcpServerUrl = await getMcpServerUrl();
-  const mcpServerNotConfigured = document.getElementById('mcpServerNotConfigured');
-  const mcpOperationsUI = document.getElementById('mcpOperationsUI');
-
-  if (mcpServerNotConfigured && mcpOperationsUI) {
-    if (!mcpServerUrl) {
-      mcpServerNotConfigured.style.display = 'block';
-      mcpOperationsUI.style.display = 'none';
-    } else {
-      mcpServerNotConfigured.style.display = 'none';
-      mcpOperationsUI.style.display = 'block';
-      // Pre-fill the URL input if it exists
-      const urlInput = document.getElementById('mcpServerUrl');
-      if (urlInput) {
-        urlInput.value = mcpServerUrl;
-      }
-    }
-  }
+// Initialize navigation and UI handlers
+async function initializeNavigation() {
+  // Always use local mode
+  updateNavigationForMode('local');
 
   // Setup category card click handlers
   const categoryCards = document.querySelectorAll('.category-card');
@@ -3755,7 +3583,7 @@ function setupDateRangeToggles() {
 
 // Initialize on page load
 updateFieldsVisibility();
-initializeModeRadio();
+initializeNavigation();
 setupEnterKeySubmission();
 setupDateInputs();
 setupDateInputClickHandlers();
@@ -3776,25 +3604,7 @@ if (newCategoryNameInput) {
   });
 }
 
-// Update when operation changes (for MCP mode)
-const operationSelect = document.getElementById("operation");
-if (operationSelect) {
-  operationSelect.addEventListener("change", () => {
-    const mode = getCurrentMode();
-    // Only handle this in MCP mode
-    if (mode === 'mcp') {
-      updateFieldsVisibility();
-      // Re-setup date inputs when operation changes (in case new date inputs are shown)
-      setupDateInputs();
-      // Setup click handlers for newly visible date inputs
-      setupDateInputClickHandlers();
-      // Setup date range toggles for newly visible sections
-      setupDateRangeToggles();
-      // Re-validate after operation change
-      validateRequiredFields();
-    }
-  });
-}
+// Operation select is no longer used (removed with MCP mode)
 
 function getInputValue(id, defaultValue = null) {
   const mode = getCurrentMode();
@@ -3903,33 +3713,13 @@ function filterVisitsByDateRange(visits, startDateStr, endDateStr) {
 }
 
 async function executeQuery() {
-  const mode = getCurrentMode();
-  let op;
+  // Always use local mode (MCP mode removed)
+  const op = currentOperation;
 
-  if (mode === 'local') {
-    // In local mode, use currentOperation from navigation state
-    op = currentOperation;
-    // Also update the hidden select for compatibility
-    const operationSelect = document.getElementById("operation");
-    if (operationSelect) {
-      operationSelect.value = op;
-    }
-  } else {
-    // In MCP mode, check if server is configured first
-    const mcpServerUrl = await getMcpServerUrl();
-    if (!mcpServerUrl) {
-      showError("MCP server is not configured. Please configure it first.");
-      // Refresh the view to show configuration UI
-      updateNavigationForMode('mcp');
-      return;
-    }
-    // In MCP mode, use currentOperation from navigation state (same as local mode)
-    op = currentOperation;
-    // Also update the hidden select for compatibility
-    const operationSelect = document.getElementById("operation");
-    if (operationSelect) {
-      operationSelect.value = op;
-    }
+  // Also update the hidden select for compatibility (if it exists)
+  const operationSelect = document.getElementById("operation");
+  if (operationSelect) {
+    operationSelect.value = op;
   }
 
   // Prevent action if no operation is selected
@@ -3963,7 +3753,7 @@ async function executeQuery() {
     }
   }
 
-  // Fetch history data first (needed for both modes)
+  // Fetch history data
   chrome.runtime.sendMessage(
     {
       type: "FETCH_HISTORY",
@@ -3971,8 +3761,7 @@ async function executeQuery() {
       maxResults: 50000
     },
     async (response) => {
-      if (mode === "local") {
-        // Run local logic
+      // Run local logic
         let result;
         let timeRangeInfo = null;
 
@@ -4193,72 +3982,6 @@ async function executeQuery() {
         } catch (error) {
           showError(`An error occurred while processing your request: ${error.message}. Please try again.`);
         }
-      } else {
-        // Send to MCP (existing MCP operations only)
-        // First check if MCP server is configured
-        const mcpServerUrl = await getMcpServerUrl();
-        if (!mcpServerUrl) {
-          showError("MCP server is not configured. Please configure it first.");
-          // Refresh the view to show configuration UI
-          updateNavigationForMode('mcp');
-          return;
-        }
-
-        const payload = {
-          operation: op
-        };
-
-        if (op === "top_links") {
-          payload.limit = getNumberInput("limit", 5);
-        } else if (op === "top_domains_by_day") {
-          const dateValue = getInputValue("date");
-          if (!dateValue) {
-            showError("Please select a date to view top domains for that day.");
-            return;
-          }
-          // Double-check that the date has data (should never fail due to validation, but safety check)
-          if (!availableDatesSet.has(dateValue)) {
-            showError(`No data available for ${dateValue}. Please select a date with available history data.`);
-            return;
-          }
-          payload.date = dateValue;
-        } else if (op === "neighbor_visits") {
-          const anchorValue = getInputValue("anchor");
-          if (!anchorValue) {
-            showError("Please enter an anchor URL to find neighboring visits.");
-            return;
-          }
-          payload.anchor = {
-            url_contains: anchorValue
-          };
-          payload.radius_minutes = getNumberInput("radius", 30);
-        }
-
-        const res = await fetch(`${mcpServerUrl}/mcp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...payload,
-            data: response.visits
-          })
-        });
-
-        const json = await res.json();
-        // Calculate time range for MCP operations
-        let timeRangeInfo = null;
-        if (op === "top_domains_by_day") {
-          const dateValue = getInputValue("date");
-          if (dateValue) {
-            timeRangeInfo = { type: 'exact_date', date: dateValue };
-          }
-        } else if (op === "neighbor_visits" && json.anchor_time) {
-          const anchorDate = new Date(json.anchor_time);
-          timeRangeInfo = { type: 'exact_date', date: anchorDate.toISOString().split('T')[0] };
-        } else {
-          timeRangeInfo = { type: 'default_range' };
-        }
-        renderResult(op, json, timeRangeInfo);
-      }
     }
   );
 }

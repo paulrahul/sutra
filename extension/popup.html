@@ -142,59 +142,6 @@
       letter-spacing: 0.3px;
     }
 
-    .mode-container {
-      display: none; /* Hidden - defaulting to Local mode */
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      background: white;
-      border-radius: 12px;
-      border: 2px solid #e5e7eb;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-
-    .mode-label {
-      font-size: 13px;
-      font-weight: 700;
-      color: #374151;
-    }
-
-    .radio-group {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .radio-option {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      padding: 6px 12px;
-      border-radius: 8px;
-      transition: all 0.2s;
-      background: #f9fafb;
-    }
-
-    .radio-option:hover {
-      background: rgba(102, 126, 234, 0.1);
-    }
-
-    .radio-option input[type="radio"] {
-      margin: 0;
-      cursor: pointer;
-      accent-color: #667eea;
-      width: 16px;
-      height: 16px;
-    }
-
-    .radio-option label {
-      font-size: 13px;
-      font-weight: 600;
-      margin: 0;
-      cursor: pointer;
-      color: #374151;
-    }
 
     .form-group {
       display: flex;
@@ -1317,19 +1264,6 @@
       <p>The smarter browser history</p>
     </div>
 
-    <div class="mode-container">
-      <span class="mode-label">Mode:</span>
-      <div class="radio-group">
-        <div class="radio-option">
-          <input type="radio" id="modeLocal" name="mode" value="local" checked />
-          <label for="modeLocal">Local</label>
-        </div>
-        <div class="radio-option">
-          <input type="radio" id="modeMCP" name="mode" value="mcp" />
-          <label for="modeMCP">MCP</label>
-        </div>
-      </div>
-    </div>
 
     <!-- Local Mode: Category-based Navigation -->
     <div id="localModeNavigation" style="display: none;">
@@ -1422,66 +1356,6 @@
       </div>
     </div>
 
-    <!-- MCP Mode: Dropdown (kept for MCP mode) -->
-    <div id="mcpModeNavigation" style="display: none;">
-      <!-- MCP Server Configuration Check -->
-      <div id="mcpServerNotConfigured" style="display: none;">
-        <div class="card" style="background: #fff3cd; border-color: #ffc107;">
-          <div class="card-header" style="color: #856404;">⚠️ MCP Server Not Configured</div>
-          <div class="card-content" style="color: #856404; margin-top: 12px;">
-            <p style="margin-bottom: 12px;">Please configure your MCP server URL before using MCP mode.</p>
-            <div class="form-group" style="margin-top: 16px;">
-              <label>MCP Server URL <span class="required">*</span></label>
-              <input type="text" id="mcpServerUrl" placeholder="http://localhost:8082" style="margin-bottom: 8px;" />
-              <button class="btn-small btn-primary" id="saveMcpServerBtn" style="width: 100%;">Save MCP Server URL</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- MCP Operations UI (shown only when server is configured) -->
-      <div id="mcpOperationsUI" style="display: none;">
-        <div class="form-group">
-          <label>Operation</label>
-          <select id="operation">
-            <option value="">Select an operation...</option>
-            <optgroup label="Top & Frequency">
-              <option value="top_links">Top visited links</option>
-              <option value="top_domains">Top domains</option>
-              <option value="top_domains_by_day">Top domains by day</option>
-              <option value="domain_frequency">Domain frequency</option>
-            </optgroup>
-            <optgroup label="Time Analysis">
-              <option value="visits_by_time_of_day">Visits by time of day</option>
-              <option value="domain_time_distribution">Domain time distribution</option>
-              <option value="browser_usage_timeline">Browser usage timeline</option>
-            </optgroup>
-            <optgroup label="Navigation & Patterns">
-              <option value="sessions">Sessions</option>
-              <option value="before_after_navigation">Before/after navigation</option>
-              <option value="navigation_paths">Most common navigation paths</option>
-              <option value="repeated_patterns">Repeated patterns</option>
-              <option value="neighbor_visits">Neighbor visits</option>
-            </optgroup>
-            <optgroup label="Summary & Trends">
-              <option value="daily_summary">Daily browsing summary</option>
-              <option value="new_vs_familiar">New vs familiar sites</option>
-              <option value="repeated_daily_habits">Repeated daily habits</option>
-              <option value="emerging_interests">Emerging interests</option>
-            </optgroup>
-            <optgroup label="Categories & Productivity">
-              <option value="category_tagging">Category tagging</option>
-              <option value="category_inference">Category inference</option>
-              <option value="productivity_vs_distraction">Productivity vs distraction</option>
-            </optgroup>
-            <optgroup label="Search & Export">
-              <option value="history_search">History search</option>
-              <option value="export_data">Export data</option>
-            </optgroup>
-          </select>
-        </div>
-      </div>
-    </div>
 
     <div class="section" data-operation="top_links">
       <div class="form-group">
