@@ -1422,6 +1422,7 @@ function renderTopLinks(data, timeRangeInfo = null) {
     const displayLabel = getUrlDisplayLabel(url) || 'Unknown';
     const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
     const color = getColorIntensity(item.visit_count, minCount, maxCount);
+    const countText = index === 0 ? `${item.visit_count} visits` : item.visit_count;
     html += `
       <div class="bar-item">
         <div class="bar-label" style="width: ${urlColumnWidth}px;" title="${url}">
@@ -1429,7 +1430,7 @@ function renderTopLinks(data, timeRangeInfo = null) {
         </div>
         <div class="bar-container">
           <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
-            <span class="bar-count">${item.visit_count}</span>
+            <span class="bar-count">${countText}</span>
           </div>
         </div>
       </div>
@@ -1466,6 +1467,7 @@ function renderTopDomains(data, timeRangeInfo = null) {
     const category = getCategory(item.domain);
     const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
     const color = getColorIntensity(item.visit_count, minCount, maxCount);
+    const countText = index === 0 ? `${item.visit_count} visits` : item.visit_count;
     html += `
       <div class="bar-item">
         <div class="bar-label" style="width: ${domainColumnWidth}px;">
@@ -1474,7 +1476,7 @@ function renderTopDomains(data, timeRangeInfo = null) {
         </div>
         <div class="bar-container">
           <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
-            <span class="bar-count">${item.visit_count}</span>
+            <span class="bar-count">${countText}</span>
           </div>
         </div>
       </div>
@@ -1581,15 +1583,16 @@ function renderDailySummary(data, timeRangeInfo = null) {
       const domainLengths = day.top_domains.map(d => d.domain.length);
       const maxDomainLength = Math.max(...domainLengths);
       const domainColumnWidth = Math.min(250, Math.max(180, maxDomainLength * 7));
-      day.top_domains.forEach(domain => {
+      day.top_domains.forEach((domain, domainIndex) => {
         const percentage = maxCount > 0 ? (domain.count / maxCount) * 100 : 0;
         const color = getColorIntensity(domain.count, minCount, maxCount);
+        const countText = domainIndex === 0 ? `${domain.count} visits` : domain.count;
         html += `
           <div class="bar-item">
             <div class="bar-label" style="width: ${domainColumnWidth}px;">${domain.domain}</div>
             <div class="bar-container">
               <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
-                <span class="bar-count">${domain.count}</span>
+                <span class="bar-count">${countText}</span>
               </div>
             </div>
           </div>
@@ -1617,9 +1620,10 @@ function renderCategoryTagging(data, timeRangeInfo = null) {
   const minCount = Math.min(...counts);
   const maxCount = Math.max(...counts);
 
-  data.categories.forEach(category => {
+  data.categories.forEach((category, index) => {
     const percentage = maxCount > 0 ? (category.visit_count / maxCount) * 100 : 0;
     const color = getColorIntensity(category.visit_count, minCount, maxCount);
+    const countText = index === 0 ? `${category.visit_count} visits` : category.visit_count;
     html += `
       <div style="margin-bottom: 16px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -1628,7 +1632,7 @@ function renderCategoryTagging(data, timeRangeInfo = null) {
         </div>
         <div class="bar-container">
           <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
-            <span class="bar-count">${category.visit_count}</span>
+            <span class="bar-count">${countText}</span>
           </div>
         </div>
         ${category.top_domains && category.top_domains.length > 0 ? `
@@ -1718,9 +1722,10 @@ function renderNavigationPaths(data, timeRangeInfo = null) {
   const maxPathLength = Math.max(...pathLengths);
   const pathColumnWidth = Math.min(250, Math.max(180, maxPathLength * 7));
 
-  data.most_common_paths.forEach(path => {
+  data.most_common_paths.forEach((path, index) => {
     const percentage = maxCount > 0 ? (path.count / maxCount) * 100 : 0;
     const color = getColorIntensity(path.count, minCount, maxCount);
+    const countText = index === 0 ? `${path.count} visits` : path.count;
     html += `
       <div class="path-item">
         <div style="flex: 1; width: ${pathColumnWidth}px;">
@@ -1730,7 +1735,7 @@ function renderNavigationPaths(data, timeRangeInfo = null) {
         </div>
         <div class="bar-container" style="width: 150px;">
           <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
-            <span class="bar-count">${path.count}</span>
+            <span class="bar-count">${countText}</span>
           </div>
         </div>
       </div>
@@ -1781,15 +1786,16 @@ function renderBeforeAfterNavigation(data, timeRangeInfo = null) {
     const maxDomainLength = Math.max(...domainLengths);
     const domainColumnWidth = Math.min(250, Math.max(180, maxDomainLength * 7));
     html += '<div class="bar-chart">';
-    data.most_common.forEach(item => {
+    data.most_common.forEach((item, index) => {
       const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
       const color = getColorIntensity(item.count, minCount, maxCount);
+      const countText = index === 0 ? `${item.count} visits` : item.count;
       html += `
         <div class="bar-item">
           <div class="bar-label" style="width: ${domainColumnWidth}px;">${item.domain}</div>
           <div class="bar-container">
             <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
-              <span class="bar-count">${item.count}</span>
+              <span class="bar-count">${countText}</span>
             </div>
           </div>
         </div>
@@ -1834,15 +1840,16 @@ function renderNeighborVisits(data, timeRangeInfo = null) {
     const maxDomainLength = Math.max(...domainLengths);
     const domainColumnWidth = Math.min(250, Math.max(180, maxDomainLength * 7));
     html += '<div class="bar-chart">';
-    data.domain_counts.forEach(item => {
+    data.domain_counts.forEach((item, index) => {
       const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
       const color = getColorIntensity(item.count, minCount, maxCount);
+      const countText = index === 0 ? `${item.count} visits` : item.count;
       html += `
         <div class="bar-item">
           <div class="bar-label" style="width: ${domainColumnWidth}px;">${item.domain}</div>
           <div class="bar-container">
             <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
-              <span class="bar-count">${item.count}</span>
+              <span class="bar-count">${countText}</span>
             </div>
           </div>
         </div>
@@ -1870,6 +1877,7 @@ function renderCategoryInference(data, timeRangeInfo = null) {
   data.categories.forEach((category, index) => {
     const percentage = maxCount > 0 ? (category.visit_count / maxCount) * 100 : 0;
     const color = getColorIntensity(category.visit_count, minCount, maxCount);
+    const countText = index === 0 ? `${category.visit_count} visits` : category.visit_count;
     const domainsList = category.unique_domains_list || [];
     const domainsListText = domainsList.length > 0 ? domainsList.join(', ') : 'No domains';
 
@@ -1881,7 +1889,7 @@ function renderCategoryInference(data, timeRangeInfo = null) {
         </div>
         <div class="bar-container">
           <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
-            <span class="bar-count">${category.visit_count}</span>
+            <span class="bar-count">${countText}</span>
           </div>
         </div>
         <div style="margin-top: 4px; font-size: 12px; color: #6c757d; position: relative; display: inline-block;">
@@ -2520,6 +2528,9 @@ function showOperationFormView(operationId) {
 
       // Set up date input click handlers for cloned section
       setupDateInputClickHandlersForSection(clonedSection);
+
+      // Set up customise widget toggle functionality
+      setupCustomiseWidgets(clonedSection);
 
       validateRequiredFields();
     }, 0);
@@ -3696,6 +3707,32 @@ function setupDateRangeToggles() {
         }
       }
     });
+  });
+}
+
+// Setup customise widget toggle functionality
+function setupCustomiseWidgets(container = document) {
+  const widgets = container.querySelectorAll('.customise-widget');
+  widgets.forEach(widget => {
+    const header = widget.querySelector('.customise-widget-header');
+    const content = widget.querySelector('.customise-widget-content');
+
+    if (header && content) {
+      // Remove any existing listeners by cloning
+      const newHeader = header.cloneNode(true);
+      header.parentNode.replaceChild(newHeader, header);
+
+      newHeader.addEventListener('click', () => {
+        const isExpanded = content.classList.contains('expanded');
+        if (isExpanded) {
+          content.classList.remove('expanded');
+          newHeader.classList.remove('expanded');
+        } else {
+          content.classList.add('expanded');
+          newHeader.classList.add('expanded');
+        }
+      });
+    }
   });
 }
 

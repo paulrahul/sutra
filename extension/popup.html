@@ -1254,6 +1254,74 @@
     .domain-tooltip-content::-webkit-scrollbar-thumb:hover {
       background: #764ba2;
     }
+
+    /* Customise Widget - Collapsible Optional Settings */
+    .customise-widget {
+      margin-top: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .customise-widget-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #f9fafb;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+
+    .customise-widget-header:hover {
+      background: #f0f4ff;
+      border-bottom-color: #e5e7eb;
+    }
+
+    .customise-widget-header.expanded {
+      border-bottom-color: #e5e7eb;
+      background: #f0f4ff;
+    }
+
+    .customise-widget-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .customise-widget-icon {
+      font-size: 16px;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #667eea;
+    }
+
+    .customise-widget-header.expanded .customise-widget-icon {
+      transform: rotate(45deg);
+    }
+
+    .customise-widget-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: white;
+    }
+
+    .customise-widget-content.expanded {
+      max-height: 2000px;
+    }
+
+    .customise-widget-content-inner {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
   </style>
 </head>
 
@@ -1361,42 +1429,66 @@
 
 
     <div class="section" data-operation="top_links">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="top_links">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="top_links" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="top_links">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="top_links" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Limit <span class="optional">(optional, default: 10)</span></label>
+              <input id="limit" type="number" value="10" min="1" />
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Limit <span class="optional">(optional, default: 10)</span></label>
-        <input id="limit" type="number" value="10" min="1" />
       </div>
     </div>
 
     <div class="section" data-operation="top_domains">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="top_domains">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="top_domains" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="top_domains">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="top_domains" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Limit <span class="optional">(optional, default: 10)</span></label>
+              <input id="limit" type="number" value="10" min="1" />
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Limit <span class="optional">(optional, default: 10)</span></label>
-        <input id="limit" type="number" value="10" min="1" />
       </div>
     </div>
 
@@ -1408,38 +1500,62 @@
     </div>
 
     <div class="section" data-operation="visits_by_time_of_day">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="visits_by_time_of_day">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="visits_by_time_of_day" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="visits_by_time_of_day">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="visits_by_time_of_day" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="section" data-operation="sessions">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="sessions">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="sessions" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="sessions">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="sessions" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Session gap (minutes) <span class="optional">(optional, default: 30)</span></label>
+              <input id="session_gap" type="number" value="30" min="1" />
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Session gap (minutes) <span class="optional">(optional, default: 30)</span></label>
-        <input id="session_gap" type="number" value="30" min="1" />
       </div>
     </div>
 
@@ -1448,55 +1564,103 @@
         <label>Anchor domain <span class="required">*</span></label>
         <input id="anchor_domain" type="text" placeholder="youtube.com" />
       </div>
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="before_after_navigation">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="before_after_navigation" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="before_after_navigation">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="before_after_navigation" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Direction <span class="optional">(optional, default: after)</span></label>
+              <select id="direction">
+                <option value="after">After</option>
+                <option value="before">Before</option>
+              </select>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Direction <span class="optional">(optional, default: after)</span></label>
-        <select id="direction">
-          <option value="after">After</option>
-          <option value="before">Before</option>
-        </select>
       </div>
     </div>
 
     <div class="section" data-operation="daily_summary">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="daily_summary">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="daily_summary" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="daily_summary">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="daily_summary" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="section" data-operation="new_vs_familiar">
-      <div class="form-group">
-        <label>Days <span class="optional">(optional, default: 7)</span></label>
-        <input id="days" type="number" value="7" min="1" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
+        </div>
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <label>Days <span class="optional">(optional, default: 7)</span></label>
+              <input id="days" type="number" value="7" min="1" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="section" data-operation="category_tagging">
-      <div class="form-group">
-        <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
-        <input id="date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
+        </div>
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
+              <input id="date" type="date" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1505,147 +1669,279 @@
         <label>Search query <span class="required">*</span></label>
         <input id="search_query" type="text" placeholder="python" />
       </div>
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="history_search">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="history_search" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="history_search">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="history_search" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="section" data-operation="export_data">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="export_data">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="export_data" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="export_data">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="export_data" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Format <span class="optional">(optional, default: json)</span></label>
+              <select id="export_format">
+                <option value="json">JSON</option>
+              </select>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Format <span class="optional">(optional, default: json)</span></label>
-        <select id="export_format">
-          <option value="json">JSON</option>
-        </select>
       </div>
     </div>
 
     <div class="section" data-operation="navigation_paths">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="navigation_paths">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="navigation_paths" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="navigation_paths">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="navigation_paths" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Limit <span class="optional">(optional, default: 10)</span></label>
+              <input id="limit" type="number" value="10" min="1" />
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Limit <span class="optional">(optional, default: 10)</span></label>
-        <input id="limit" type="number" value="10" min="1" />
       </div>
     </div>
 
     <div class="section" data-operation="repeated_patterns">
-      <div class="form-group">
-        <label>Days <span class="optional">(optional, default: 7)</span></label>
-        <input id="days" type="number" value="7" min="1" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
+        </div>
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <label>Days <span class="optional">(optional, default: 7)</span></label>
+              <input id="days" type="number" value="7" min="1" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="section" data-operation="domain_frequency">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="domain_frequency">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="domain_frequency" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="domain_frequency">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="domain_frequency" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="section" data-operation="domain_time_distribution">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="domain_time_distribution">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="domain_time_distribution" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="domain_time_distribution">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="domain_time_distribution" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Domain filter <span class="optional">(optional, leave empty for all domains)</span></label>
+              <input id="domain_filter" type="text" placeholder="youtube.com" />
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Domain filter <span class="optional">(optional, leave empty for all domains)</span></label>
-        <input id="domain_filter" type="text" placeholder="youtube.com" />
       </div>
     </div>
 
     <div class="section" data-operation="category_inference">
-      <div class="form-group">
-        <a href="#" class="date-range-toggle" data-operation="category_inference">📅 Set custom date range</a>
-      </div>
-      <div class="date-range-fields" data-operation="category_inference" style="display: none;">
-        <div class="form-group">
-          <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
-          <input id="start_date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label>End Date <span class="optional">(optional, default: today)</span></label>
-          <input id="end_date" type="date" />
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <a href="#" class="date-range-toggle" data-operation="category_inference">📅 Set custom date range</a>
+            </div>
+            <div class="date-range-fields" data-operation="category_inference" style="display: none;">
+              <div class="form-group">
+                <label>Start Date <span class="optional">(optional, default: 7 days ago)</span></label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="form-group">
+                <label>End Date <span class="optional">(optional, default: today)</span></label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="section" data-operation="productivity_vs_distraction">
-      <div class="form-group">
-        <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
-        <input id="date" type="date" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
+        </div>
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <label>Date <span class="optional">(optional, leave empty for all time)</span></label>
+              <input id="date" type="date" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="section" data-operation="repeated_daily_habits">
-      <div class="form-group">
-        <label>Days <span class="optional">(optional, default: 30)</span></label>
-        <input id="days" type="number" value="30" min="1" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
+        </div>
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <label>Days <span class="optional">(optional, default: 30)</span></label>
+              <input id="days" type="number" value="30" min="1" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="section" data-operation="emerging_interests">
-      <div class="form-group">
-        <label>Days <span class="optional">(optional, default: 7)</span></label>
-        <input id="days" type="number" value="7" min="1" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
+        </div>
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <label>Days <span class="optional">(optional, default: 7)</span></label>
+              <input id="days" type="number" value="7" min="1" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="section" data-operation="browser_usage_timeline">
-      <div class="form-group">
-        <label>Hours <span class="optional">(optional, default: 24)</span></label>
-        <input id="hours" type="number" value="24" min="1" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
+        </div>
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <label>Hours <span class="optional">(optional, default: 24)</span></label>
+              <input id="hours" type="number" value="24" min="1" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1654,13 +1950,25 @@
         <label>Anchor URL contains <span class="required">*</span></label>
         <input id="anchor" type="text" placeholder="etsy.com" />
       </div>
-      <div class="form-group">
-        <label>Date & Time <span class="optional">(optional, finds nearest anchor visit to this time)</span></label>
-        <input id="anchor_datetime" type="datetime-local" />
-      </div>
-      <div class="form-group">
-        <label>Radius (minutes) <span class="optional">(optional, default: 30)</span></label>
-        <input id="radius" type="number" value="30" min="1" />
+      <div class="customise-widget">
+        <div class="customise-widget-header">
+          <div class="customise-widget-title">
+            <span class="customise-widget-icon">+</span>
+            <span>Customise</span>
+          </div>
+        </div>
+        <div class="customise-widget-content">
+          <div class="customise-widget-content-inner">
+            <div class="form-group">
+              <label>Date & Time <span class="optional">(optional, finds nearest anchor visit to this time)</span></label>
+              <input id="anchor_datetime" type="datetime-local" />
+            </div>
+            <div class="form-group">
+              <label>Radius (minutes) <span class="optional">(optional, default: 30)</span></label>
+              <input id="radius" type="number" value="30" min="1" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
