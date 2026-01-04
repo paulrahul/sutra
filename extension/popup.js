@@ -1348,29 +1348,89 @@ function createTimeChart(data, width = 450, height = 200, options = {}) {
   `;
 }
 
+// Helper function to generate dot density visualization
+// Dynamically scales dots based on min/max counts, ensuring min gets at least 1 dot
+function generateDotDensity(count, minCount, maxCount, maxDots = 20) {
+  if (minCount === maxCount) {
+    return '●'; // If all counts are the same, show 1 dot
+  }
+
+  // Scale: minCount gets 1 dot, maxCount gets maxDots dots
+  // Formula: dots = 1 + (count - minCount) / (maxCount - minCount) * (maxDots - 1)
+  const normalized = (count - minCount) / (maxCount - minCount);
+  const dotCount = Math.max(1, Math.round(1 + normalized * (maxDots - 1)));
+  return '●'.repeat(dotCount);
+}
+
+// Helper function to calculate color intensity based on count
+// Returns a color string interpolated along the gradient based on normalized count
+// Uses the gradient colors from the Fetch button: #667eea to #764ba2
+// Intensity decreases proportionately with count (lower counts = lighter color via opacity)
+function getColorIntensity(count, minCount, maxCount) {
+  if (minCount === maxCount) {
+    return 'rgba(102, 126, 234, 0.8)'; // Default color if all counts are the same
+  }
+
+  // Normalize count to 0-1 range
+  const normalized = (count - minCount) / (maxCount - minCount);
+
+  // Interpolate between the two gradient colors based on normalized value
+  // Color 1: #667eea (rgb(102, 126, 234)) - start of gradient
+  // Color 2: #764ba2 (rgb(118, 75, 162)) - end of gradient
+  const r1 = 102, g1 = 126, b1 = 234;
+  const r2 = 118, g2 = 75, b2 = 162;
+
+  // Interpolate RGB values along the gradient
+  const r = Math.round(r1 + (r2 - r1) * normalized);
+  const g = Math.round(g1 + (g2 - g1) * normalized);
+  const b = Math.round(b1 + (b2 - b1) * normalized);
+
+  // Intensity decreases with lower counts (use opacity for intensity)
+  // Higher counts get more opacity (more intense), lower counts get less (less intense)
+  // Opacity range: 0.4 to 1.0 for better visibility
+  const opacity = 0.4 + (normalized * 0.6); // Range from 0.4 to 1.0
+
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 function renderTopLinks(data, timeRangeInfo = null) {
   if (!Array.isArray(data) || data.length === 0) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
 
-  const maxCount = Math.max(...data.map(item => item.visit_count || 0));
+  const counts = data.map(item => item.visit_count || 0);
+  const minCount = Math.min(...counts);
+  const maxCount = Math.max(...counts);
+
+  // Calculate max URL display length to determine column width
+  const urlLengths = data.map(item => {
+    const url = item.url || '';
+    const displayLabel = getUrlDisplayLabel(url) || 'Unknown';
+    return displayLabel.length;
+  });
+  const maxUrlLength = Math.max(...urlLengths);
+  // Set a reasonable max width: most URLs should show fully, only very long ones get ellipsized
+  // Increased width to give more space for URLs
+  const urlColumnWidth = Math.min(250, Math.max(180, maxUrlLength * 7)); // ~7px per character
 
   let html = '<div class="result-container">';
   html += '<div class="card"><div class="card-header">Top Visited Links ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="bar-chart">';
 
   data.forEach((item, index) => {
-    const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
     const url = item.url || '';
-    // Show the full URL path, not just the domain, so different URLs are distinguishable
     const displayLabel = getUrlDisplayLabel(url) || 'Unknown';
+    const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
+    const color = getColorIntensity(item.visit_count, minCount, maxCount);
     html += `
       <div class="bar-item">
-        <div class="bar-label" title="${url}">
+        <div class="bar-label" style="width: ${urlColumnWidth}px;" title="${url}">
           ${displayLabel}
         </div>
         <div class="bar-container">
-          <div class="bar-fill" style="width: ${percentage}%">${item.visit_count}</div>
+          <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
+            <span class="bar-count">${item.visit_count}</span>
+          </div>
         </div>
       </div>
     `;
@@ -1385,23 +1445,37 @@ function renderTopDomains(data, timeRangeInfo = null) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No data found</div></div>';
   }
 
-  const maxCount = Math.max(...data.map(item => item.visit_count || 0));
+  const counts = data.map(item => item.visit_count || 0);
+  const minCount = Math.min(...counts);
+  const maxCount = Math.max(...counts);
+
+  // Calculate max domain display length (including category badge)
+  const domainLengths = data.map(item => {
+    const category = getCategory(item.domain);
+    const domainText = item.domain + (category ? ` ${category}` : '');
+    return domainText.length;
+  });
+  const maxDomainLength = Math.max(...domainLengths);
+  const domainColumnWidth = Math.min(250, Math.max(180, maxDomainLength * 7));
 
   let html = '<div class="result-container">';
   html += '<div class="card"><div class="card-header">Top Domains ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
   html += '<div class="bar-chart">';
 
   data.forEach((item, index) => {
-    const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
     const category = getCategory(item.domain);
+    const percentage = maxCount > 0 ? (item.visit_count / maxCount) * 100 : 0;
+    const color = getColorIntensity(item.visit_count, minCount, maxCount);
     html += `
       <div class="bar-item">
-        <div class="bar-label">
+        <div class="bar-label" style="width: ${domainColumnWidth}px;">
           ${item.domain}
           <span class="category-badge category-${category.toLowerCase().replace(' ', '-')}">${category}</span>
         </div>
         <div class="bar-container">
-          <div class="bar-fill" style="width: ${percentage}%">${item.visit_count}</div>
+          <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
+            <span class="bar-count">${item.visit_count}</span>
+          </div>
         </div>
       </div>
     `;
@@ -1501,14 +1575,22 @@ function renderDailySummary(data, timeRangeInfo = null) {
     if (day.top_domains && day.top_domains.length > 0) {
       html += '<div style="margin-top: 16px;"><strong>Top Domains:</strong></div>';
       html += '<div class="bar-chart">';
-      const maxCount = Math.max(...day.top_domains.map(d => d.count || 0));
+      const domainCounts = day.top_domains.map(d => d.count || 0);
+      const minCount = Math.min(...domainCounts);
+      const maxCount = Math.max(...domainCounts);
+      const domainLengths = day.top_domains.map(d => d.domain.length);
+      const maxDomainLength = Math.max(...domainLengths);
+      const domainColumnWidth = Math.min(250, Math.max(180, maxDomainLength * 7));
       day.top_domains.forEach(domain => {
         const percentage = maxCount > 0 ? (domain.count / maxCount) * 100 : 0;
+        const color = getColorIntensity(domain.count, minCount, maxCount);
         html += `
           <div class="bar-item">
-            <div class="bar-label">${domain.domain}</div>
+            <div class="bar-label" style="width: ${domainColumnWidth}px;">${domain.domain}</div>
             <div class="bar-container">
-              <div class="bar-fill" style="width: ${percentage}%">${domain.count}</div>
+              <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
+                <span class="bar-count">${domain.count}</span>
+              </div>
             </div>
           </div>
         `;
@@ -1531,10 +1613,13 @@ function renderCategoryTagging(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
   html += '<div class="card"><div class="card-header">Category Tagging ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
-  const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
+  const counts = data.categories.map(c => c.visit_count || 0);
+  const minCount = Math.min(...counts);
+  const maxCount = Math.max(...counts);
 
   data.categories.forEach(category => {
     const percentage = maxCount > 0 ? (category.visit_count / maxCount) * 100 : 0;
+    const color = getColorIntensity(category.visit_count, minCount, maxCount);
     html += `
       <div style="margin-bottom: 16px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -1542,7 +1627,9 @@ function renderCategoryTagging(data, timeRangeInfo = null) {
           <span style="font-weight: 600;">${category.visit_count} visits</span>
         </div>
         <div class="bar-container">
-          <div class="bar-fill" style="width: ${percentage}%"></div>
+          <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
+            <span class="bar-count">${category.visit_count}</span>
+          </div>
         </div>
         ${category.top_domains && category.top_domains.length > 0 ? `
           <div style="margin-top: 8px; font-size: 12px; color: #6c757d;">
@@ -1622,19 +1709,29 @@ function renderNavigationPaths(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
   html += '<div class="card"><div class="card-header">Most Common Navigation Paths ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
-  const maxCount = Math.max(...data.most_common_paths.map(p => p.count || 0));
+  const pathCounts = data.most_common_paths.map(p => p.count || 0);
+  const minCount = Math.min(...pathCounts);
+  const maxCount = Math.max(...pathCounts);
+
+  // Calculate max path text length for fixed width
+  const pathLengths = data.most_common_paths.map(p => (p.from + ' → ' + p.to).length);
+  const maxPathLength = Math.max(...pathLengths);
+  const pathColumnWidth = Math.min(250, Math.max(180, maxPathLength * 7));
 
   data.most_common_paths.forEach(path => {
     const percentage = maxCount > 0 ? (path.count / maxCount) * 100 : 0;
+    const color = getColorIntensity(path.count, minCount, maxCount);
     html += `
       <div class="path-item">
-        <div style="flex: 1;">
+        <div style="flex: 1; width: ${pathColumnWidth}px;">
           <strong>${path.from}</strong>
           <span class="path-arrow"> → </span>
           <strong>${path.to}</strong>
         </div>
         <div class="bar-container" style="width: 150px;">
-          <div class="bar-fill" style="width: ${percentage}%">${path.count}</div>
+          <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
+            <span class="bar-count">${path.count}</span>
+          </div>
         </div>
       </div>
     `;
@@ -1677,15 +1774,23 @@ function renderBeforeAfterNavigation(data, timeRangeInfo = null) {
   html += '<div class="card"><div class="card-header">Navigation ' + (data.direction === 'after' ? 'After' : 'Before') + ' ' + data.anchor_domain + ' ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
   if (data.most_common && data.most_common.length > 0) {
-    const maxCount = Math.max(...data.most_common.map(d => d.count || 0));
+    const counts = data.most_common.map(d => d.count || 0);
+    const minCount = Math.min(...counts);
+    const maxCount = Math.max(...counts);
+    const domainLengths = data.most_common.map(d => d.domain.length);
+    const maxDomainLength = Math.max(...domainLengths);
+    const domainColumnWidth = Math.min(250, Math.max(180, maxDomainLength * 7));
     html += '<div class="bar-chart">';
     data.most_common.forEach(item => {
       const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+      const color = getColorIntensity(item.count, minCount, maxCount);
       html += `
         <div class="bar-item">
-          <div class="bar-label">${item.domain}</div>
+          <div class="bar-label" style="width: ${domainColumnWidth}px;">${item.domain}</div>
           <div class="bar-container">
-            <div class="bar-fill" style="width: ${percentage}%">${item.count}</div>
+            <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
+              <span class="bar-count">${item.count}</span>
+            </div>
           </div>
         </div>
       `;
@@ -1722,15 +1827,23 @@ function renderNeighborVisits(data, timeRangeInfo = null) {
   html += `<div style="margin-bottom: 12px; color: #6c757d;">Around ${data.anchor_domain} on ${formattedDate}</div>`;
 
   if (data.domain_counts && data.domain_counts.length > 0) {
-    const maxCount = Math.max(...data.domain_counts.map(d => d.count || 0));
+    const counts = data.domain_counts.map(d => d.count || 0);
+    const minCount = Math.min(...counts);
+    const maxCount = Math.max(...counts);
+    const domainLengths = data.domain_counts.map(d => d.domain.length);
+    const maxDomainLength = Math.max(...domainLengths);
+    const domainColumnWidth = Math.min(250, Math.max(180, maxDomainLength * 7));
     html += '<div class="bar-chart">';
     data.domain_counts.forEach(item => {
       const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+      const color = getColorIntensity(item.count, minCount, maxCount);
       html += `
         <div class="bar-item">
-          <div class="bar-label">${item.domain}</div>
+          <div class="bar-label" style="width: ${domainColumnWidth}px;">${item.domain}</div>
           <div class="bar-container">
-            <div class="bar-fill" style="width: ${percentage}%">${item.count}</div>
+            <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
+              <span class="bar-count">${item.count}</span>
+            </div>
           </div>
         </div>
       `;
@@ -1750,10 +1863,13 @@ function renderCategoryInference(data, timeRangeInfo = null) {
   let html = '<div class="result-container">';
   html += '<div class="card"><div class="card-header">Top categories ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
 
-  const maxCount = Math.max(...data.categories.map(c => c.visit_count || 0));
+  const counts = data.categories.map(c => c.visit_count || 0);
+  const minCount = Math.min(...counts);
+  const maxCount = Math.max(...counts);
 
   data.categories.forEach((category, index) => {
     const percentage = maxCount > 0 ? (category.visit_count / maxCount) * 100 : 0;
+    const color = getColorIntensity(category.visit_count, minCount, maxCount);
     const domainsList = category.unique_domains_list || [];
     const domainsListText = domainsList.length > 0 ? domainsList.join(', ') : 'No domains';
 
@@ -1764,7 +1880,9 @@ function renderCategoryInference(data, timeRangeInfo = null) {
           <span style="font-weight: 600;">${category.visit_count} visits (${category.percentage})</span>
         </div>
         <div class="bar-container">
-          <div class="bar-fill" style="width: ${percentage}%"></div>
+          <div class="bar-fill" style="width: ${percentage}%; background: ${color};">
+            <span class="bar-count">${category.visit_count}</span>
+          </div>
         </div>
         <div style="margin-top: 4px; font-size: 12px; color: #6c757d; position: relative; display: inline-block;">
           <span class="unique-domains-hover" data-category-index="${index}" style="cursor: pointer; text-decoration: underline; text-decoration-style: dotted;">
