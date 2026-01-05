@@ -1219,6 +1219,12 @@ function showLoading() {
   `;
 }
 
+function hideLoading() {
+  // Loading state is cleared when results are rendered
+  // This function exists for consistency and can be used to clear loading state if needed
+  // In most cases, results are rendered directly, so this is a no-op
+}
+
 // Convert error codes to human-readable messages
 function getHumanReadableError(error, context = {}) {
   if (typeof error !== 'string') {
@@ -1260,6 +1266,13 @@ function showError(message, context = {}) {
   const output = document.getElementById("output");
   const humanReadableMessage = getHumanReadableError(message, context);
   output.innerHTML = `<div class="error">${humanReadableMessage}</div>`;
+}
+
+function clearOutput() {
+  const output = document.getElementById("output");
+  if (output) {
+    output.innerHTML = '';
+  }
 }
 
 // Create SVG line/area chart for time distributions
@@ -2225,6 +2238,149 @@ function formatTimeRangeForHeader(timeRangeInfo) {
   return `<span style="font-weight: 400; color: #667eea; font-size: 0.9em;">(${rangeText})</span>`;
 }
 
+/**
+ * Render AI search results
+ * @param {string} query - Original user query
+ * @param {Object} plan - Execution plan
+ * @param {*} result - Execution result
+ * @param {Object} metadata - Additional metadata
+ */
+function renderAIResult(query, plan, result, metadata = {}) {
+  const output = document.getElementById("output");
+  if (!output) return;
+
+  let html = '<div class="result-container">';
+  html += '<div class="card">';
+  html += `<div class="card-header">AI Search Results</div>`;
+  html += '<div class="card-content" style="padding: 16px;">';
+
+  // Show query
+  html += `<div style="margin-bottom: 16px;">`;
+  html += `<div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Query:</div>`;
+  html += `<div style="font-weight: 600; color: #1f2937;">"${query}"</div>`;
+  html += `</div>`;
+
+  // Show execution plan (collapsible)
+  if (plan && plan.steps) {
+    html += `<details style="margin-bottom: 16px;">`;
+    html += `<summary style="cursor: pointer; font-size: 13px; color: #667eea; font-weight: 600; margin-bottom: 8px;">Execution Plan (${plan.steps.length} step${plan.steps.length !== 1 ? 's' : ''})</summary>`;
+    html += `<div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-top: 8px; font-size: 12px; font-family: monospace;">`;
+    html += `<pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(plan, null, 2)}</pre>`;
+    html += `</div>`;
+    html += `</details>`;
+  }
+
+  // Handle error results
+  if (result && result.error) {
+    html += `<div style="color: #dc2626; padding: 12px; background: #fef2f2; border-radius: 8px; margin-top: 12px;">`;
+    html += `<strong>Error:</strong> ${result.error}`;
+    if (result.message) {
+      html += `<br><span style="font-size: 12px;">${result.message}</span>`;
+    }
+    html += `</div>`;
+    html += '</div></div></div>';
+    output.innerHTML = html;
+    return;
+  }
+
+  // Handle empty results
+  if (!result || (Array.isArray(result) && result.length === 0)) {
+    html += `<div class="empty-state" style="margin-top: 12px;">`;
+    html += `<div class="empty-state-icon">📭</div>`;
+    html += `<div>No results found</div>`;
+    html += `</div>`;
+    html += '</div></div></div>';
+    output.innerHTML = html;
+    return;
+  }
+
+  // Render results based on type
+  if (Array.isArray(result)) {
+    // Array of visits
+    if (result.length > 0 && result[0].url) {
+      html += `<div style="margin-top: 12px;">`;
+      html += `<div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">Found ${result.length} result${result.length !== 1 ? 's' : ''}</div>`;
+      html += `<div style="max-height: 400px; overflow-y: auto;">`;
+
+      result.slice(0, 50).forEach((visit, index) => {
+        const date = new Date(visit.visited_at);
+        html += `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb; ${index === 0 ? 'border-top: 1px solid #e5e7eb;' : ''}">`;
+        html += `<div style="font-weight: 600; margin-bottom: 4px;">`;
+        html += `<a href="${visit.url}" target="_blank" style="color: #667eea; text-decoration: none;">${visit.title || visit.url}</a>`;
+        html += `</div>`;
+        html += `<div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">${visit.url}</div>`;
+        html += `<div style="font-size: 11px; color: #9ca3af;">${date.toLocaleString()}</div>`;
+        html += `</div>`;
+      });
+
+      if (result.length > 50) {
+        html += `<div style="padding: 12px; text-align: center; color: #6b7280; font-size: 12px;">... and ${result.length - 50} more results</div>`;
+      }
+
+      html += `</div>`;
+      html += `</div>`;
+    }
+    // Array of grouped results
+    else if (result.length > 0 && result[0].domain) {
+      html += `<div style="margin-top: 12px;">`;
+      html += `<div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">Found ${result.length} domain${result.length !== 1 ? 's' : ''}</div>`;
+      html += `<div style="max-height: 400px; overflow-y: auto;">`;
+
+      result.forEach((item, index) => {
+        html += `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb; ${index === 0 ? 'border-top: 1px solid #e5e7eb;' : ''}">`;
+        html += `<div style="font-weight: 600; margin-bottom: 4px;">${item.domain}</div>`;
+        html += `<div style="font-size: 12px; color: #6b7280;">${item.visit_count || item.count || 0} visit${(item.visit_count || item.count || 0) !== 1 ? 's' : ''}</div>`;
+        html += `</div>`;
+      });
+
+      html += `</div>`;
+      html += `</div>`;
+    }
+    // Array of sessions
+    else if (result.length > 0 && result[0].start) {
+      html += `<div style="margin-top: 12px;">`;
+      html += `<div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">Found ${result.length} session${result.length !== 1 ? 's' : ''}</div>`;
+      html += `<div style="max-height: 400px; overflow-y: auto;">`;
+
+      result.forEach((session, index) => {
+        const startDate = new Date(session.start);
+        const endDate = new Date(session.end);
+        html += `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb; ${index === 0 ? 'border-top: 1px solid #e5e7eb;' : ''}">`;
+        html += `<div style="font-weight: 600; margin-bottom: 4px;">Session ${index + 1}</div>`;
+        html += `<div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">`;
+        html += `${startDate.toLocaleString()} - ${endDate.toLocaleString()}`;
+        html += `</div>`;
+        html += `<div style="font-size: 11px; color: #9ca3af;">`;
+        html += `${session.visit_count} visits • ${session.duration_minutes} minutes`;
+        html += `</div>`;
+        html += `</div>`;
+      });
+
+      html += `</div>`;
+      html += `</div>`;
+    }
+    // Generic array
+    else {
+      html += `<div style="margin-top: 12px;">`;
+      html += `<pre style="background: #f9fafb; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(result, null, 2)}</pre>`;
+      html += `</div>`;
+    }
+  }
+  // Object result
+  else if (typeof result === 'object') {
+    html += `<div style="margin-top: 12px;">`;
+    html += `<pre style="background: #f9fafb; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(result, null, 2)}</pre>`;
+    html += `</div>`;
+  }
+  // Primitive result
+  else {
+    html += `<div style="margin-top: 12px; font-size: 14px;">${result}</div>`;
+  }
+
+  html += '</div></div></div>';
+  output.innerHTML = html;
+}
+
 function renderResult(operation, result, timeRangeInfo = null) {
   const output = document.getElementById("output");
 
@@ -2415,6 +2571,9 @@ function showOperationsView(categoryId) {
   document.getElementById('settingsView').style.display = 'none';
 
   updateCategoryNavLinks();
+
+  // Clear output when switching views
+  clearOutput();
 
   // Update view title
   document.getElementById('operationsViewTitle').textContent = category.title;
@@ -2723,7 +2882,145 @@ async function initializeNavigation() {
   // Load user categories and initialize settings
   loadUserCategories().then(() => {
     renderSettingsView();
+    initializeLLMConfig();
   });
+}
+
+// ============================================================================
+// LLM Configuration Handlers
+// ============================================================================
+
+/**
+ * Initialize LLM configuration UI
+ */
+async function initializeLLMConfig() {
+  // Load current configuration
+  const config = await getLLMConfig();
+
+  // Set provider radio button
+  const localRadio = document.getElementById('llmProviderLocal');
+  const cloudRadio = document.getElementById('llmProviderCloud');
+  if (localRadio && cloudRadio) {
+    if (config.provider === 'local') {
+      localRadio.checked = true;
+      document.getElementById('localLLMSettings').style.display = 'block';
+      document.getElementById('cloudLLMSettings').style.display = 'none';
+    } else {
+      cloudRadio.checked = true;
+      document.getElementById('localLLMSettings').style.display = 'none';
+      document.getElementById('cloudLLMSettings').style.display = 'block';
+    }
+
+    // Add change listeners
+    localRadio.addEventListener('change', () => {
+      if (localRadio.checked) {
+        document.getElementById('localLLMSettings').style.display = 'block';
+        document.getElementById('cloudLLMSettings').style.display = 'none';
+      }
+    });
+
+    cloudRadio.addEventListener('change', () => {
+      if (cloudRadio.checked) {
+        document.getElementById('localLLMSettings').style.display = 'none';
+        document.getElementById('cloudLLMSettings').style.display = 'block';
+      }
+    });
+  }
+
+  // Set current values
+  const localEndpoint = document.getElementById('localLLMEndpoint');
+  const localModel = document.getElementById('localLLMModel');
+  const cloudProvider = document.getElementById('cloudProvider');
+  const apiKey = document.getElementById('llmApiKey');
+  const cloudModel = document.getElementById('cloudLLMModel');
+
+  if (localEndpoint) localEndpoint.value = config.localEndpoint || 'http://localhost:11434/api/generate';
+  if (localModel) localModel.value = config.model || 'llama3';
+  if (cloudProvider) cloudProvider.value = config.cloudProvider || 'openai';
+  if (apiKey) apiKey.value = config.apiKey || '';
+  if (cloudModel) cloudModel.value = config.model || 'gpt-4';
+
+  // Save button handler
+  const saveBtn = document.getElementById('saveLLMConfigBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      await saveLLMConfig();
+    });
+  }
+
+  // Test connection button handler
+  const testBtn = document.getElementById('testLLMConnectionBtn');
+  if (testBtn) {
+    testBtn.addEventListener('click', async () => {
+      await testLLMConnection();
+    });
+  }
+}
+
+/**
+ * Save LLM configuration
+ */
+async function saveLLMConfig() {
+  const provider = document.querySelector('input[name="llmProvider"]:checked')?.value || 'local';
+  const localEndpoint = document.getElementById('localLLMEndpoint')?.value || '';
+  const localModel = document.getElementById('localLLMModel')?.value || 'llama3';
+  const cloudProvider = document.getElementById('cloudProvider')?.value || 'openai';
+  const apiKey = document.getElementById('llmApiKey')?.value || '';
+  const cloudModel = document.getElementById('cloudLLMModel')?.value || 'gpt-4';
+
+  const config = {
+    llmProvider: provider,
+    localLLMEndpoint: localEndpoint,
+    cloudProvider: cloudProvider,
+    apiKey: apiKey,
+    model: provider === 'local' ? localModel : cloudModel
+  };
+
+  await new Promise((resolve) => {
+    chrome.storage.local.set(config, resolve);
+  });
+
+  const statusDiv = document.getElementById('llmConfigStatus');
+  if (statusDiv) {
+    statusDiv.innerHTML = '<span style="color: #10b981;">✓ Configuration saved successfully</span>';
+    setTimeout(() => {
+      statusDiv.innerHTML = '';
+    }, 3000);
+  }
+}
+
+/**
+ * Test LLM connection
+ */
+async function testLLMConnection() {
+  const statusDiv = document.getElementById('llmConfigStatus');
+  if (statusDiv) {
+    statusDiv.innerHTML = '<span style="color: #6b7280;">Testing connection...</span>';
+  }
+
+  try {
+    // Save config first
+    await saveLLMConfig();
+
+    // Get updated config
+    const config = await getLLMConfig();
+
+    // Test with a simple prompt
+    const testPrompt = 'Generate a simple execution plan for: "show top 5 domains"';
+    const response = await callLLM(testPrompt, config);
+
+    if (response && response.trim()) {
+      if (statusDiv) {
+        statusDiv.innerHTML = '<span style="color: #10b981;">✓ Connection successful! LLM is working.</span>';
+      }
+    } else {
+      throw new Error('Empty response from LLM');
+    }
+  } catch (error) {
+    if (statusDiv) {
+      statusDiv.innerHTML = `<span style="color: #dc2626;">✗ Connection failed: ${error.message}</span>`;
+    }
+  }
 }
 
 // Show settings view
@@ -2738,6 +3035,10 @@ function showSettingsView() {
   document.getElementById('settingsView').style.display = 'block';
 
   updateCategoryNavLinks();
+
+  // Clear output when switching views
+  clearOutput();
+
   renderSettingsView();
 }
 
@@ -4200,9 +4501,538 @@ function initRotatingPlaceholder() {
   setInterval(updatePlaceholder, rotationInterval);
 }
 
+// ============================================================================
+// Contract-Based Operations (for AI Search Executor)
+// Operations follow the contract: operation(ctx, params) → result
+// ============================================================================
+
+/**
+ * Get history operation - returns data from context (no filtering needed here)
+ * Time filtering is handled by the executor before passing data to operations
+ */
+function getHistory(ctx, params) {
+  // This operation just returns the current data
+  // Time filtering should be done by executor based on params.time
+  return ctx.data;
+}
+
+/**
+ * Top links operation (contract-based)
+ */
+function topLinks(ctx, params) {
+  const data = ctx.data;
+  const limit = params.limit || 10;
+
+  const counter = {};
+  data.forEach(v => {
+    const normalizedUrl = normalizeUrl(v.url);
+    counter[normalizedUrl] = (counter[normalizedUrl] || 0) + 1;
+  });
+
+  return Object.entries(counter)
+    .map(([url, count]) => ({ url, visit_count: count }))
+    .sort((a, b) => b.visit_count - a.visit_count)
+    .slice(0, limit);
+}
+
+/**
+ * Top domains operation (contract-based)
+ */
+function topDomains(ctx, params) {
+  const data = ctx.data;
+  const limit = params.limit || 10;
+
+  const counts = {};
+  data.forEach(v => {
+    const domain = getDomain(v.url);
+    if (domain) {
+      counts[domain] = (counts[domain] || 0) + 1;
+    }
+  });
+
+  return Object.entries(counts)
+    .map(([domain, visit_count]) => ({ domain, visit_count }))
+    .sort((a, b) => b.visit_count - a.visit_count)
+    .slice(0, limit || Infinity);
+}
+
+/**
+ * Filter by domain operation (contract-based)
+ */
+function filterByDomain(ctx, params) {
+  const data = ctx.data;
+  const domain = params.domain;
+
+  if (!domain) {
+    return data; // No filter if domain not specified
+  }
+
+  return data.filter(v => {
+    const visitDomain = getDomain(v.url);
+    return visitDomain && visitDomain.includes(domain);
+  });
+}
+
+/**
+ * Neighbor visits operation (contract-based)
+ */
+function neighborVisits(ctx, params) {
+  const data = ctx.data;
+  const anchor = params.anchor || params.url_contains;
+  const radiusMinutes = params.radius_minutes || 30;
+  const anchorDateTime = params.anchor_datetime || null;
+
+  if (!anchor) {
+    return { error: "ANCHOR_REQUIRED", message: "Anchor URL or domain is required" };
+  }
+
+  let anchorMatches = data.filter(v => v.url.includes(anchor));
+
+  if (anchorMatches.length === 0) {
+    return { error: "ANCHOR_NOT_FOUND", anchorUrl: anchor };
+  }
+
+  // If datetime is provided, find the nearest anchor visit to that time
+  let anchorVisit;
+  if (anchorDateTime) {
+    const targetTime = new Date(anchorDateTime);
+    anchorVisit = anchorMatches.reduce((closest, current) => {
+      const currentTime = new Date(current.visited_at);
+      const closestTime = new Date(closest.visited_at);
+      const currentDiff = Math.abs(currentTime - targetTime);
+      const closestDiff = Math.abs(closestTime - targetTime);
+      return currentDiff < closestDiff ? current : closest;
+    });
+  } else {
+    anchorVisit = anchorMatches[0];
+  }
+
+  const anchorDomain = getDomain(anchorVisit.url);
+  const anchorTime = new Date(anchorVisit.visited_at);
+  const start = new Date(anchorTime.getTime() - radiusMinutes * 60 * 1000);
+  const end = new Date(anchorTime.getTime() + radiusMinutes * 60 * 1000);
+
+  const neighborDomains = new Set();
+  const domainCounts = {};
+  const neighborVisits = [];
+
+  data.forEach(v => {
+    const visitTime = new Date(v.visited_at);
+    if (visitTime >= start && visitTime <= end &&
+        !(v.url === anchorVisit.url && v.visited_at === anchorVisit.visited_at)) {
+      const domain = getDomain(v.url);
+      if (domain && domain !== anchorDomain) {
+        neighborDomains.add(domain);
+        domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+        neighborVisits.push(v);
+      }
+    }
+  });
+
+  return {
+    anchor_url: anchorVisit.url,
+    anchor_time: anchorVisit.visited_at,
+    anchor_domain: anchorDomain,
+    radius_minutes: radiusMinutes,
+    neighbor_domains: Array.from(neighborDomains),
+    neighbor_visits: neighborVisits.sort((a, b) =>
+      new Date(a.visited_at) - new Date(b.visited_at)
+    ),
+    domain_counts: Object.entries(domainCounts)
+      .map(([domain, count]) => ({ domain, count }))
+      .sort((a, b) => b.count - a.count)
+  };
+}
+
+/**
+ * Sessions operation (contract-based)
+ */
+function sessionize(ctx, params) {
+  const data = ctx.data;
+  const sessionGapMinutes = params.session_gap || params.gap_minutes || 30;
+
+  if (data.length === 0) return [];
+
+  const sorted = [...data].sort((a, b) =>
+    new Date(a.visited_at) - new Date(b.visited_at)
+  );
+
+  const sessions = [];
+  let currentSession = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prevTime = new Date(sorted[i - 1].visited_at);
+    const currTime = new Date(sorted[i].visited_at);
+    const gapMinutes = (currTime - prevTime) / (1000 * 60);
+
+    if (gapMinutes <= sessionGapMinutes) {
+      currentSession.push(sorted[i]);
+    } else {
+      sessions.push({
+        start: currentSession[0].visited_at,
+        end: currentSession[currentSession.length - 1].visited_at,
+        duration_minutes: Math.round(
+          (new Date(currentSession[currentSession.length - 1].visited_at) -
+           new Date(currentSession[0].visited_at)) / (1000 * 60)
+        ),
+        visit_count: currentSession.length,
+        visits: currentSession
+      });
+      currentSession = [sorted[i]];
+    }
+  }
+
+  if (currentSession.length > 0) {
+    sessions.push({
+      start: currentSession[0].visited_at,
+      end: currentSession[currentSession.length - 1].visited_at,
+      duration_minutes: Math.round(
+        (new Date(currentSession[currentSession.length - 1].visited_at) -
+         new Date(currentSession[0].visited_at)) / (1000 * 60)
+      ),
+      visit_count: currentSession.length,
+      visits: currentSession
+    });
+  }
+
+  return sessions;
+}
+
+/**
+ * Group by operation (contract-based)
+ */
+function groupBy(ctx, params) {
+  const data = ctx.data;
+  const field = params.field || 'domain';
+
+  const groups = {};
+
+  data.forEach(v => {
+    let key;
+    if (field === 'domain') {
+      key = getDomain(v.url) || 'unknown';
+    } else if (field === 'url') {
+      key = normalizeUrl(v.url);
+    } else if (field === 'date') {
+      const date = new Date(v.visited_at);
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    } else {
+      key = v[field] || 'unknown';
+    }
+
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(v);
+  });
+
+  return Object.entries(groups).map(([key, visits]) => ({
+    [field]: key,
+    count: visits.length,
+    visits: visits
+  }));
+}
+
+// ============================================================================
+// Register Operations
+// ============================================================================
+
+// Register operations when registry is available
+function registerAllOperations() {
+  if (typeof registerOperation === 'undefined') {
+    // Registry not loaded yet, will be called after script loads
+    return;
+  }
+
+  // Get history - returns data as-is (time filtering handled by executor)
+  registerOperation({
+    name: 'get_history',
+    description: 'Fetch browser history data. Time filtering is handled by the executor based on params.time',
+    params: {
+      time: { type: 'string', description: 'Time range: "yesterday", "last_week", "last_30_days", "all", etc.' }
+    },
+    execute: getHistory
+  });
+
+  // Top links
+  registerOperation({
+    name: 'top_links',
+    description: 'Returns the most visited URLs',
+    params: {
+      limit: { type: 'number', default: 10, description: 'Maximum number of results' }
+    },
+    execute: topLinks
+  });
+
+  // Top domains
+  registerOperation({
+    name: 'top_domains',
+    description: 'Returns the most visited domains',
+    params: {
+      limit: { type: 'number', default: 10, description: 'Maximum number of results' }
+    },
+    execute: topDomains
+  });
+
+  // Filter by domain
+  registerOperation({
+    name: 'filter_by_domain',
+    description: 'Filters visits by domain name',
+    params: {
+      domain: { type: 'string', required: true, description: 'Domain to filter by (partial match)' }
+    },
+    execute: filterByDomain
+  });
+
+  // Neighbor visits
+  registerOperation({
+    name: 'neighbor_visits',
+    description: 'Finds visits near the same time as an anchor URL',
+    params: {
+      anchor: { type: 'string', description: 'Anchor URL or domain to search for' },
+      url_contains: { type: 'string', description: 'Alternative to anchor: URL substring to match' },
+      radius_minutes: { type: 'number', default: 30, description: 'Time radius in minutes' },
+      anchor_datetime: { type: 'string', description: 'Specific datetime for anchor (ISO format)' }
+    },
+    execute: neighborVisits
+  });
+
+  // Sessions
+  registerOperation({
+    name: 'sessionize',
+    description: 'Groups browsing activity into sessions based on time gaps',
+    params: {
+      session_gap: { type: 'number', default: 30, description: 'Gap in minutes that defines a new session' },
+      gap_minutes: { type: 'number', default: 30, description: 'Alternative parameter name for session_gap' }
+    },
+    execute: sessionize
+  });
+
+  // Group by
+  registerOperation({
+    name: 'group_by',
+    description: 'Groups visits by a field (domain, url, date)',
+    params: {
+      field: { type: 'string', default: 'domain', description: 'Field to group by: "domain", "url", or "date"' }
+    },
+    execute: groupBy
+  });
+
+  // Semantic operations (v1 - local heuristics)
+  if (typeof semanticFilter !== 'undefined') {
+    registerOperation({
+      name: 'semantic_filter',
+      description: 'Filters visits based on semantic query using keyword and domain heuristics',
+      params: {
+        query: { type: 'string', required: true, description: 'Semantic query string to match against titles, URLs, and domains' }
+      },
+      execute: semanticFilter
+    });
+
+    registerOperation({
+      name: 'filter_by_keywords',
+      description: 'Filters visits by keywords in specified fields',
+      params: {
+        keywords: { type: 'array', required: true, description: 'Array of keywords to search for' },
+        fields: { type: 'array', default: ['title', 'url'], description: 'Fields to search in: "title", "url", "domain"' }
+      },
+      execute: filterByKeywords
+    });
+
+    registerOperation({
+      name: 'find_pending_links',
+      description: 'Finds links visited once that are old (long pending to read)',
+      params: {
+        days_old: { type: 'number', default: 7, description: 'Minimum age in days to be considered "pending"' }
+      },
+      execute: findPendingLinks
+    });
+
+    registerOperation({
+      name: 'find_distracting_content',
+      description: 'Finds content from distracting domains (social media, entertainment)',
+      params: {},
+      execute: findDistractingContent
+    });
+
+    registerOperation({
+      name: 'find_stopped_caring',
+      description: 'Finds domains that were visited before but not recently',
+      params: {
+        recent_days: { type: 'number', default: 30, description: 'Number of days to consider as "recent"' }
+      },
+      execute: findStoppedCaring
+    });
+  }
+}
+
+// ============================================================================
+// AI Search Handlers
+// ============================================================================
+
+/**
+ * Handle AI search submission
+ */
+async function handleAISearch() {
+  const searchInput = document.getElementById('aiSearchInput');
+  const query = searchInput?.value.trim();
+
+  if (!query) {
+    return; // Empty query, do nothing
+  }
+
+  // Show loading state
+  if (searchInput) {
+    searchInput.classList.add('loading');
+    searchInput.disabled = true;
+  }
+
+  const submitButton = document.getElementById('aiSearchSubmit');
+  if (submitButton) {
+    submitButton.disabled = true;
+  }
+
+  try {
+    showLoading();
+
+    // Check LLM configuration
+    if (typeof getLLMConfig === 'undefined') {
+      throw new Error('LLM client not loaded');
+    }
+
+    const llmConfig = await getLLMConfig();
+    if (!llmConfig.provider || (llmConfig.provider === 'cloud' && !llmConfig.apiKey)) {
+      showError('LLM not configured. Please configure it in Settings.');
+      // Show configuration prompt
+      const output = document.getElementById("output");
+      if (output) {
+        output.innerHTML = `
+          <div class="card" style="background: #fff3cd; border-color: #ffc107;">
+            <div class="card-header" style="color: #856404;">⚠️ LLM Not Configured</div>
+            <div class="card-content" style="color: #856404; margin-top: 12px; padding: 16px;">
+              <p style="margin-bottom: 12px;">Please configure your LLM in Settings before using AI search.</p>
+              <button class="btn-small btn-primary" onclick="showSettingsView()" style="width: 100%;">Go to Settings</button>
+            </div>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    // Fetch history data
+    const response = await new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        {
+          type: "FETCH_HISTORY",
+          startTime: 0,
+          maxResults: 50000
+        },
+        resolve
+      );
+    });
+
+    if (response.error) {
+      showError(`Failed to fetch history: ${response.error}`);
+      return;
+    }
+
+    if (!response.visits || response.visits.length === 0) {
+      showError('No browsing history found.');
+      return;
+    }
+
+    // Generate execution plan from LLM
+    if (typeof generatePlan === 'undefined') {
+      throw new Error('Plan generator not loaded');
+    }
+
+    let plan;
+    try {
+      plan = await generatePlan(query);
+    } catch (error) {
+      if (error.message.includes('Cannot connect') || error.message.includes('API key')) {
+        showError(`LLM Error: ${error.message}`);
+        return;
+      }
+      throw error;
+    }
+
+    // Execute plan
+    if (typeof executePlan === 'undefined') {
+      throw new Error('Query executor not loaded');
+    }
+
+    let result;
+    try {
+      result = executePlan(plan, response.visits);
+    } catch (error) {
+      showError(`Execution Error: ${error.message}`);
+      return;
+    }
+
+    // Render results
+    if (typeof renderAIResult === 'undefined') {
+      throw new Error('Result renderer not loaded');
+    }
+
+    renderAIResult(query, plan, result);
+
+  } catch (error) {
+    showError(`An error occurred: ${error.message}`);
+    console.error('AI Search Error:', error);
+  } finally {
+    // Hide loading state
+    if (searchInput) {
+      searchInput.classList.remove('loading');
+      searchInput.disabled = false;
+    }
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
+    hideLoading();
+  }
+}
+
+/**
+ * Initialize AI search bar handlers
+ */
+function initAISearch() {
+  const searchInput = document.getElementById('aiSearchInput');
+  const submitButton = document.getElementById('aiSearchSubmit');
+
+  if (!searchInput) {
+    return; // AI search bar not found
+  }
+
+  // Enter key handler
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAISearch();
+    }
+  });
+
+  // Submit button handler
+  if (submitButton) {
+    submitButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleAISearch();
+    });
+  }
+
+  // Focus on search bar when extension opens (optional)
+  // searchInput.focus();
+}
+
 // Initialize rotating placeholder when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initRotatingPlaceholder);
+  document.addEventListener('DOMContentLoaded', () => {
+    initRotatingPlaceholder();
+    registerAllOperations();
+    initAISearch();
+  });
 } else {
   initRotatingPlaceholder();
+  registerAllOperations();
+  initAISearch();
 }

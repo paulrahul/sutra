@@ -63,37 +63,19 @@
       font-weight: 500;
     }
 
-    /* AI Search Bar - Coming Soon Feature */
-    .coming-soon-container {
+    /* AI Search Bar */
+    .ai-search-container {
       margin-top: 40px;
       padding: 20px;
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-      border: 2px dashed #d1d5db;
+      border: 2px solid #e5e7eb;
       border-radius: 16px;
-      position: relative;
-      opacity: 0.85;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .coming-soon-container:hover {
-      opacity: 1;
+    .ai-search-container:focus-within {
       border-color: #667eea;
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-    }
-
-    .coming-soon-badge {
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
     .search-container {
@@ -103,18 +85,24 @@
 
     .ai-search-bar {
       width: 100%;
-      padding: 14px 42px 14px 16px;
+      padding: 14px 50px 14px 16px;
       border: 2px solid #e5e7eb;
       border-radius: 12px;
       font-size: 13px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       background: white;
-      color: #9ca3af;
+      color: #1f2937;
       font-weight: 500;
-      cursor: not-allowed;
+      cursor: text;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .ai-search-bar:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 
     .ai-search-bar::placeholder {
@@ -123,15 +111,42 @@
       text-overflow: ellipsis;
     }
 
-    .search-icon {
+    .ai-search-submit {
       position: absolute;
-      right: 12px;
+      right: 8px;
       top: 50%;
       transform: translateY(-50%);
-      color: #9ca3af;
-      font-size: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 8px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      padding: 0;
+    }
+
+    .ai-search-submit:hover {
+      transform: translateY(-50%) scale(1.05);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .ai-search-submit:active {
+      transform: translateY(-50%) scale(0.95);
+    }
+
+    .ai-search-submit .search-icon {
+      color: white;
+      font-size: 18px;
       pointer-events: none;
-      transition: color 0.3s;
+    }
+
+    .ai-search-bar.loading {
+      cursor: wait;
+      opacity: 0.7;
     }
 
     .search-hint {
@@ -1369,18 +1384,19 @@
           </div>
         </div>
 
-        <!-- AI Search Bar - Coming Soon -->
-        <div class="coming-soon-container">
-          <div class="coming-soon-badge">✨ Coming Soon</div>
+        <!-- AI Search Bar -->
+        <div class="ai-search-container">
           <div class="search-container">
             <input
               type="text"
               class="ai-search-bar"
+              id="aiSearchInput"
               placeholder="Ask anything about your browsing history..."
-              disabled
-              title="AI-powered search coming soon"
+              title="AI-powered semantic search"
             />
-            <span class="search-icon">🔍</span>
+            <button class="ai-search-submit" id="aiSearchSubmit" title="Search">
+              <span class="search-icon">🔍</span>
+            </button>
           </div>
           <div class="search-hint">AI-powered semantic search. Ask anything about your browsing history.</div>
         </div>
@@ -1408,19 +1424,86 @@
       <!-- Settings View -->
       <div id="settingsView" class="navigation-view settings-view" style="display: none;">
         <div class="navigation-header">
-          <div class="view-title">Category Settings</div>
+          <div class="view-title">Settings</div>
           <button class="back-button" id="backFromSettings">←</button>
         </div>
         <div id="settingsContainer">
-          <div style="margin-bottom: 20px; color: #6c757d; font-size: 13px;">
-            Manage your custom website categories. Add categories and assign domains to them.
+          <!-- LLM Configuration -->
+          <div class="category-item" style="margin-bottom: 24px;">
+            <div class="category-item-header">
+              <div class="category-item-name">🤖 AI Search (LLM) Configuration</div>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label style="font-weight: 600; margin-bottom: 8px; display: block;">LLM Provider</label>
+              <div class="radio-group" style="margin-top: 8px;">
+                <label class="radio-option">
+                  <input type="radio" name="llmProvider" value="local" id="llmProviderLocal" />
+                  <span>Local (Ollama, etc.)</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="llmProvider" value="cloud" id="llmProviderCloud" />
+                  <span>Cloud (OpenAI, Anthropic)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Local LLM Settings -->
+            <div id="localLLMSettings" style="display: none;">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label style="font-weight: 600; margin-bottom: 4px; display: block; font-size: 13px;">Local LLM Endpoint</label>
+                <input type="text" id="localLLMEndpoint" placeholder="http://localhost:11434/api/generate" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;" />
+                <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">Default: http://localhost:11434/api/generate (Ollama)</div>
+              </div>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label style="font-weight: 600; margin-bottom: 4px; display: block; font-size: 13px;">Model Name</label>
+                <input type="text" id="localLLMModel" placeholder="llama3" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;" />
+                <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">Model to use (e.g., llama3, mistral, etc.)</div>
+              </div>
+            </div>
+
+            <!-- Cloud LLM Settings -->
+            <div id="cloudLLMSettings" style="display: none;">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label style="font-weight: 600; margin-bottom: 4px; display: block; font-size: 13px;">Cloud Provider</label>
+                <select id="cloudProvider" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;">
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label style="font-weight: 600; margin-bottom: 4px; display: block; font-size: 13px;">API Key</label>
+                <input type="password" id="llmApiKey" placeholder="Enter your API key" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;" />
+                <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">Your API key is stored locally and never sent to external servers</div>
+              </div>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label style="font-weight: 600; margin-bottom: 4px; display: block; font-size: 13px;">Model</label>
+                <input type="text" id="cloudLLMModel" placeholder="gpt-4 or claude-3-sonnet-20240229" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;" />
+                <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">Model name (e.g., gpt-4, claude-3-sonnet-20240229)</div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+              <button class="btn-small btn-primary" id="saveLLMConfigBtn" style="flex: 1;">Save LLM Configuration</button>
+              <button class="btn-small" id="testLLMConnectionBtn" style="flex: 1;">Test Connection</button>
+            </div>
+            <div id="llmConfigStatus" style="margin-top: 12px; font-size: 12px;"></div>
           </div>
-          <div id="categoriesList"></div>
-          <div class="add-category-section">
-            <div style="font-weight: 600; margin-bottom: 12px;">Add New Category</div>
-            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-              <input type="text" id="newCategoryName" placeholder="Category name (e.g., Social Media)" style="flex: 1; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px;" />
-              <button class="btn-small btn-primary" id="addCategoryBtn">Add Category</button>
+
+          <!-- Category Settings -->
+          <div class="category-item">
+            <div class="category-item-header">
+              <div class="category-item-name">📁 Custom Categories</div>
+            </div>
+            <div style="margin-bottom: 20px; color: #6c757d; font-size: 13px;">
+              Manage your custom website categories. Add categories and assign domains to them.
+            </div>
+            <div id="categoriesList"></div>
+            <div class="add-category-section">
+              <div style="font-weight: 600; margin-bottom: 12px;">Add New Category</div>
+              <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <input type="text" id="newCategoryName" placeholder="Category name (e.g., Social Media)" style="flex: 1; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px;" />
+                <button class="btn-small btn-primary" id="addCategoryBtn">Add Category</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1977,6 +2060,11 @@
     <div id="output"></div>
   </div>
 
+  <script src="operation-registry.js"></script>
+  <script src="semantic-operations.js"></script>
+  <script src="query-executor.js"></script>
+  <script src="llm-client.js"></script>
+  <script src="plan-generator.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
