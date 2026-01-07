@@ -116,7 +116,7 @@
       right: 8px;
       top: 50%;
       transform: translateY(-50%);
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: none;
       border: none;
       border-radius: 8px;
       width: 36px;
@@ -127,19 +127,22 @@
       cursor: pointer;
       transition: all 0.2s;
       padding: 0;
+      text-decoration: none;
+      box-shadow: none;
     }
 
     .ai-search-submit:hover {
-      transform: translateY(-50%) scale(1.05);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      background: none;
+      box-shadow: none;
     }
 
     .ai-search-submit:active {
-      transform: translateY(-50%) scale(0.95);
+      background: none;
+      box-shadow: none;
     }
 
     .ai-search-submit .search-icon {
-      color: white;
+      color: #9ca3af;
       font-size: 18px;
       pointer-events: none;
     }
@@ -166,7 +169,7 @@
 
     label {
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 400;
       color: #374151;
       display: block;
     }
@@ -1337,6 +1340,30 @@
       flex-direction: column;
       gap: 12px;
     }
+
+    /* Radio button alignment */
+    .radio-group {
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .radio-option input[type="radio"] {
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .radio-option span {
+      min-width: 180px;
+      white-space: nowrap;
+    }
   </style>
 </head>
 
@@ -1394,9 +1421,9 @@
               placeholder="Ask anything about your browsing history..."
               title="AI-powered semantic search"
             />
-            <button class="ai-search-submit" id="aiSearchSubmit" title="Search">
+            <a href="#" class="ai-search-submit" id="aiSearchSubmit" title="Search">
               <span class="search-icon">🔍</span>
-            </button>
+            </a>
           </div>
           <div class="search-hint">AI-powered semantic search. Ask anything about your browsing history.</div>
         </div>
@@ -1431,11 +1458,11 @@
           <!-- LLM Configuration -->
           <div class="category-item" style="margin-bottom: 24px;">
             <div class="category-item-header">
-              <div class="category-item-name">🤖 AI Search (LLM) Configuration</div>
+              <div class="category-item-name">AI Search Configuration</div>
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
-              <label style="font-weight: 600; margin-bottom: 8px; display: block;">LLM Provider</label>
-              <div class="radio-group" style="margin-top: 8px;">
+              <label style="font-weight: 600; display: block; margin-bottom: 4px;">LLM Provider</label>
+              <div class="radio-group">
                 <label class="radio-option">
                   <input type="radio" name="llmProvider" value="local" id="llmProviderLocal" />
                   <span>Local (Ollama, etc.)</span>
@@ -1492,7 +1519,7 @@
           <!-- Category Settings -->
           <div class="category-item">
             <div class="category-item-header">
-              <div class="category-item-name">📁 Custom Categories</div>
+              <div class="category-item-name">Custom Categories</div>
             </div>
             <div style="margin-bottom: 20px; color: #6c757d; font-size: 13px;">
               Manage your custom website categories. Add categories and assign domains to them.

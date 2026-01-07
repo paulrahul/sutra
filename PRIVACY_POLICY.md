@@ -130,3 +130,4 @@ This privacy policy is designed to comply with:
 **Note:** This extension is provided "as is" and processes your data locally by default. When using MCP mode with external servers, you are responsible for ensuring those servers comply with applicable privacy laws and regulations.
 
 
+

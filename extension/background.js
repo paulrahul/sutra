@@ -62,7 +62,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           console.error("Error fetching visits:", error);
           sendResponse({ visits: [], error: error.message });
         });
-      }
+      } // result of chrome.history.search
     );
     return true;
+  }
 });
