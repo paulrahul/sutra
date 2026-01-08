@@ -3125,47 +3125,59 @@ async function getUncategorizedDomains() {
 }
 
 // Render settings view with system and user categories
+let isRenderingSettingsView = false;
 async function renderSettingsView() {
-  const categoriesList = document.getElementById('categoriesList');
-  categoriesList.innerHTML = '';
-
-  // Clear selection when re-rendering
-  selectedDomains.clear();
-  const existingActionBar = document.getElementById('floatingActionBar');
-  if (existingActionBar) {
-    existingActionBar.remove();
+  // Prevent concurrent calls
+  if (isRenderingSettingsView) {
+    return;
   }
 
-  // First render system categories
-  Object.keys(SYSTEM_CATEGORIES).forEach(categoryName => {
-    const domains = getSystemCategoryWithOverrides(categoryName);
-    const isSystem = true;
-    renderCategoryItem(categoriesList, categoryName, domains, isSystem);
-  });
+  isRenderingSettingsView = true;
 
-  // Then render user-defined categories (skip "Others" as it's handled separately)
-  Object.entries(userCategories).forEach(([categoryName, domains]) => {
-    // Skip "Others" category - it's always rendered as a special dynamic category
-    if (categoryName === 'Others') {
-      return;
+  try {
+    const categoriesList = document.getElementById('categoriesList');
+    categoriesList.innerHTML = '';
+
+    // Clear selection when re-rendering
+    selectedDomains.clear();
+    const existingActionBar = document.getElementById('floatingActionBar');
+    if (existingActionBar) {
+      existingActionBar.remove();
     }
-    const isSystem = false;
-    renderCategoryItem(categoriesList, categoryName, domains, isSystem);
-  });
 
-  // Render "Others" category with uncategorized domains (always render this special category)
-  const uncategorizedDomains = await getUncategorizedDomains();
-  if (uncategorizedDomains.length > 0) {
-    renderCategoryItem(categoriesList, 'Others', uncategorizedDomains, false, true);
+    // First render system categories
+    Object.keys(SYSTEM_CATEGORIES).forEach(categoryName => {
+      const domains = getSystemCategoryWithOverrides(categoryName);
+      const isSystem = true;
+      renderCategoryItem(categoriesList, categoryName, domains, isSystem);
+    });
+
+    // Then render user-defined categories (skip "Others" as it's handled separately)
+    Object.entries(userCategories).forEach(([categoryName, domains]) => {
+      // Skip "Others" category - it's always rendered as a special dynamic category
+      if (categoryName === 'Others') {
+        return;
+      }
+      const isSystem = false;
+      renderCategoryItem(categoriesList, categoryName, domains, isSystem);
+    });
+
+    // Render "Others" category with uncategorized domains (always render this special category)
+    const uncategorizedDomains = await getUncategorizedDomains();
+    if (uncategorizedDomains.length > 0) {
+      renderCategoryItem(categoriesList, 'Others', uncategorizedDomains, false, true);
+    }
+
+    if (Object.keys(SYSTEM_CATEGORIES).length === 0 && Object.keys(userCategories).length === 0 && uncategorizedDomains.length === 0) {
+      categoriesList.innerHTML = '<div style="color: #6c757d; font-size: 13px; padding: 20px; text-align: center;">No categories yet. Add one below!</div>';
+    }
+
+    // Setup handlers after rendering
+    setupCategoryItemHandlers();
+    setupDragAndDrop();
+  } finally {
+    isRenderingSettingsView = false;
   }
-
-  if (Object.keys(SYSTEM_CATEGORIES).length === 0 && Object.keys(userCategories).length === 0 && uncategorizedDomains.length === 0) {
-    categoriesList.innerHTML = '<div style="color: #6c757d; font-size: 13px; padding: 20px; text-align: center;">No categories yet. Add one below!</div>';
-  }
-
-  // Setup handlers after rendering
-  setupCategoryItemHandlers();
-  setupDragAndDrop();
 }
 
 // Store selected domains for bulk operations
