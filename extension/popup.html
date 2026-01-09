@@ -34,6 +34,7 @@
       text-align: center;
       /* padding-bottom: 20px; */
       border-bottom: none;
+      position: relative;
     }
 
     .header h1 {
@@ -49,6 +50,43 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
+    }
+
+    .dark-mode-toggle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: white;
+      /* border: 2px solid #e5e7eb; */
+      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); */
+      font-size: 20px;
+    }
+
+    .dark-mode-toggle:hover {
+      border-color: #667eea;
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.15);
+      transform: scale(1.05);
+    }
+
+    .dark-mode-toggle:active {
+      transform: scale(0.95);
+    }
+
+    .dark-mode-toggle-icon {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: block;
+    }
+
+    .dark-mode-toggle:hover .dark-mode-toggle-icon {
+      transform: rotate(15deg);
     }
 
     .header-icon {
@@ -1431,12 +1469,416 @@
         max-height: 1000px;
       }
     }
+
+    /* Dark Mode Styles */
+    body.dark-mode {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .container {
+      background: #1f2937;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .header p {
+      color: #9ca3af;
+    }
+
+    body.dark-mode .ai-search-container {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+      border-color: #374151;
+    }
+
+    body.dark-mode .ai-search-container:focus-within {
+      border-color: #667eea;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+    }
+
+    body.dark-mode .ai-search-bar {
+      background: #111827;
+      border-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .ai-search-bar:focus {
+      border-color: #667eea;
+    }
+
+    body.dark-mode .ai-search-bar::placeholder {
+      color: #6b7280;
+    }
+
+    body.dark-mode .search-hint {
+      color: #9ca3af;
+    }
+
+    body.dark-mode .ai-search-loading {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+    }
+
+    body.dark-mode label {
+      color: #d1d5db;
+    }
+
+    body.dark-mode select,
+    body.dark-mode input {
+      background: #111827;
+      border-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode select:focus,
+    body.dark-mode input:focus {
+      border-color: #667eea;
+    }
+
+    body.dark-mode select:hover,
+    body.dark-mode input:hover {
+      border-color: #4b5563;
+    }
+
+    body.dark-mode .card {
+      background: #111827;
+      border-color: #374151;
+    }
+
+    body.dark-mode .card:hover {
+      border-color: #4b5563;
+    }
+
+    body.dark-mode .card-header {
+      color: #f3f4f6;
+    }
+
+    body.dark-mode .card-content {
+      color: #d1d5db;
+    }
+
+    body.dark-mode .list-item {
+      background: #111827;
+      border-left-color: #667eea;
+    }
+
+    body.dark-mode .list-item:hover {
+      background: #1f2937;
+    }
+
+    body.dark-mode .list-item-title {
+      color: #f3f4f6;
+    }
+
+    body.dark-mode .list-item-subtitle {
+      color: #9ca3af;
+    }
+
+    body.dark-mode .list-item-value {
+      color: #d1d5db;
+    }
+
+    body.dark-mode .bar-label {
+      color: #d1d5db;
+    }
+
+    body.dark-mode .bar-container {
+      background: #374151;
+    }
+
+    body.dark-mode .navigation-header {
+      border-bottom-color: #374151;
+    }
+
+    body.dark-mode .view-title {
+      color: #f3f4f6;
+    }
+
+    body.dark-mode .back-button {
+      background: #111827;
+      border-color: #374151;
+      color: #d1d5db;
+    }
+
+    body.dark-mode .back-button:hover {
+      background: #1f2937;
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    body.dark-mode .operation-card {
+      background: #111827;
+      border-color: #374151;
+    }
+
+    body.dark-mode .operation-card:hover {
+      background: #1f2937;
+      border-color: #667eea;
+    }
+
+    body.dark-mode .operation-name {
+      color: #f3f4f6;
+    }
+
+    body.dark-mode .operation-help {
+      color: #9ca3af;
+    }
+
+    body.dark-mode .category-nav-link {
+      color: #667eea;
+    }
+
+    body.dark-mode .category-nav-link:hover {
+      background: rgba(102, 126, 234, 0.15);
+    }
+
+    body.dark-mode .category-nav-link.active {
+      color: #d1d5db;
+    }
+
+    body.dark-mode .category-item {
+      background: #111827;
+      border-color: #374151;
+    }
+
+    body.dark-mode .category-item:hover {
+      border-color: #4b5563;
+    }
+
+    body.dark-mode .category-item-name {
+      color: #f3f4f6;
+    }
+
+    body.dark-mode .btn-small {
+      background: #111827;
+      border-color: #374151;
+      color: #d1d5db;
+    }
+
+    body.dark-mode .btn-small:hover {
+      background: #1f2937;
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    body.dark-mode .domain-tag {
+      background: rgba(102, 126, 234, 0.15);
+      border-color: #667eea;
+      color: #a5b4fc;
+    }
+
+    body.dark-mode .domain-tag:hover {
+      background: rgba(102, 126, 234, 0.25);
+    }
+
+    body.dark-mode .domain-tag-selectable {
+      background: rgba(102, 126, 234, 0.15);
+      border-color: #667eea;
+      color: #a5b4fc;
+    }
+
+    body.dark-mode .domain-tag-selectable:hover {
+      background: rgba(102, 126, 234, 0.25);
+    }
+
+    body.dark-mode .others-search-input {
+      background: #111827;
+      border-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .others-domain-list {
+      background: #111827;
+      border-color: #374151;
+    }
+
+    body.dark-mode .floating-action-bar {
+      background: #111827;
+      border-top-color: #667eea;
+    }
+
+    body.dark-mode .floating-action-bar-text {
+      color: #f3f4f6;
+    }
+
+    body.dark-mode .floating-cancel-btn {
+      background: #111827;
+      border-color: #374151;
+      color: #d1d5db;
+    }
+
+    body.dark-mode .floating-cancel-btn:hover {
+      background: #1f2937;
+      border-color: #4b5563;
+    }
+
+    body.dark-mode .customise-widget {
+      border-color: #374151;
+    }
+
+    body.dark-mode .customise-widget-header {
+      background: #111827;
+    }
+
+    body.dark-mode .customise-widget-header:hover {
+      background: #1f2937;
+      border-bottom-color: #374151;
+    }
+
+    body.dark-mode .customise-widget-header.expanded {
+      border-bottom-color: #374151;
+      background: #1f2937;
+    }
+
+    body.dark-mode .customise-widget-title {
+      color: #d1d5db;
+    }
+
+    body.dark-mode .customise-widget-content {
+      background: #111827;
+    }
+
+    body.dark-mode .date-range-toggle {
+      color: #a5b4fc;
+    }
+
+    body.dark-mode .date-range-toggle:hover {
+      background: rgba(102, 126, 234, 0.15);
+    }
+
+    body.dark-mode .error {
+      background: rgba(220, 38, 38, 0.15);
+      border-left-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    body.dark-mode .empty-state {
+      color: #6b7280;
+    }
+
+    body.dark-mode .time-chart-container {
+      background: #111827;
+      border-color: #374151;
+    }
+
+    body.dark-mode .session-card {
+      background: #111827;
+      border-left-color: #667eea;
+    }
+
+    body.dark-mode .session-card:hover {
+      background: #1f2937;
+    }
+
+    body.dark-mode .session-time {
+      color: #9ca3af;
+    }
+
+    body.dark-mode .session-stat {
+      color: #d1d5db;
+    }
+
+    body.dark-mode .path-item {
+      background: #111827;
+    }
+
+    body.dark-mode .path-item:hover {
+      background: #1f2937;
+    }
+
+    body.dark-mode .add-category-section {
+      border-color: #374151;
+      background: #111827;
+    }
+
+    body.dark-mode .add-category-section:hover {
+      border-color: #667eea;
+      background: #1f2937;
+    }
+
+    body.dark-mode .domain-tooltip {
+      background: #111827;
+      border-color: #667eea;
+    }
+
+    body.dark-mode .domain-tooltip-close {
+      background: #1f2937;
+      color: #9ca3af;
+    }
+
+    body.dark-mode .domain-tooltip-close:hover {
+      background: #374151;
+      color: #d1d5db;
+    }
+
+    body.dark-mode .domain-tooltip-content {
+      color: #d1d5db;
+    }
+
+    body.dark-mode .dark-mode-toggle {
+      background: #111827;
+      border-color: #374151;
+    }
+
+    body.dark-mode .dark-mode-toggle:hover {
+      border-color: #667eea;
+      background: #1f2937;
+    }
+
+    body.dark-mode #output::-webkit-scrollbar-track {
+      background: #374151;
+    }
+
+    body.dark-mode #output::-webkit-scrollbar-thumb {
+      background: #667eea;
+    }
+
+    body.dark-mode #output::-webkit-scrollbar-thumb:hover {
+      background: #764ba2;
+    }
+
+    body.dark-mode pre {
+      background: #111827 !important;
+      color: #e5e7eb !important;
+      border: 1px solid #374151 !important;
+    }
+
+    body.dark-mode .category-card {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+      border-color: rgba(102, 126, 234, 0.3);
+    }
+
+    body.dark-mode .category-card:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+      border-color: rgba(102, 126, 234, 0.5);
+    }
+
+    body.dark-mode .stat-card {
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    body.dark-mode .stat-card:hover {
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    body.dark-mode .category-nav-links {
+      border-bottom-color: #374151;
+    }
+
+    body.dark-mode .category-nav-separator {
+      color: #4b5563;
+    }
+
+    body.dark-mode .time-slot-header {
+      color: #d1d5db;
+    }
   </style>
 </head>
 
 <body>
   <div class="container">
     <div class="header">
+      <div class="dark-mode-toggle" id="darkModeToggle" title="Toggle dark mode">
+        <span class="dark-mode-toggle-icon" id="darkModeToggleIcon">☀︎</span>
+      </div>
       <h1>
         <img src="img/sutra_icon_32.png" alt="Sutra" class="header-icon" />
         Sutra

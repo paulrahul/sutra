@@ -2,7 +2,7 @@
 
 <div align="center">
   <img src="extension/img/sutra_icon_128.png" alt="Sutra Logo" width="128" height="128">
-  <h3>Intelligence from your browsing history</h3>
+  <h3>The smarter browser history</h3>
   <p>Discover insights and patterns from your browsing behavior</p>
 </div>
 

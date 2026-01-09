@@ -5201,15 +5201,67 @@ function restoreLastResultState() {
   });
 }
 
+// ============================================================================
+// Dark Mode Functionality
+// ============================================================================
+
+/**
+ * Initialize dark mode toggle
+ */
+function initializeDarkMode() {
+  const darkModeToggle = document.getElementById('darkModeToggle');
+  if (!darkModeToggle) return;
+
+  // Load dark mode preference
+  chrome.storage.local.get(['darkMode'], (result) => {
+    const isDarkMode = result.darkMode === true;
+    setDarkMode(isDarkMode);
+  });
+
+  // Add click handler
+  darkModeToggle.addEventListener('click', () => {
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    const newDarkMode = !isDarkMode;
+    setDarkMode(newDarkMode);
+
+    // Save preference
+    chrome.storage.local.set({ darkMode: newDarkMode });
+  });
+}
+
+/**
+ * Set dark mode state
+ */
+function setDarkMode(enabled) {
+  const darkModeToggle = document.getElementById('darkModeToggle');
+  const darkModeToggleIcon = document.getElementById('darkModeToggleIcon');
+
+  if (enabled) {
+    document.body.classList.add('dark-mode');
+    // Show sun icon when in dark mode (to switch to light)
+    if (darkModeToggleIcon) {
+      darkModeToggleIcon.textContent = '☀︎';
+    }
+  } else {
+    document.body.classList.remove('dark-mode');
+    // Show moon icon when in light mode (to switch to dark)
+    if (darkModeToggleIcon) {
+      darkModeToggleIcon.textContent = '◑'; //⏾
+    }
+  }
+}
+
 // Initialize rotating placeholder when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
+    initializeDarkMode();
     initRotatingPlaceholder();
     registerAllOperations();
     initAISearch();
     restoreLastResultState();
   });
 } else {
+  initializeDarkMode();
   initRotatingPlaceholder();
   registerAllOperations();
   initAISearch();
