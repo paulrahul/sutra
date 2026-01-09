@@ -103,7 +103,6 @@
 
     /* AI Search Bar */
     .ai-search-container {
-      margin-top: 40px;
       padding: 20px;
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
       border: 2px solid #e5e7eb;
@@ -118,7 +117,7 @@
 
     .search-container {
       position: relative;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .ai-search-bar {
@@ -229,6 +228,74 @@
       vertical-align: middle;
     }
 
+    /* AI Search Section Header */
+    .ai-search-section {
+      margin-bottom: 0;
+    }
+
+    .ai-search-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .ai-search-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #374151;
+      letter-spacing: -0.2px;
+    }
+
+    .beta-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #78350f;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-radius: 20px;
+      box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Section Divider */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e5e7eb 20%, #e5e7eb 80%, transparent);
+    }
+
+    .divider-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: lowercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Quick Actions Section */
+    .quick-actions-section {
+      margin-top: 0;
+    }
+
+    .quick-actions-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+    }
 
     .form-group {
       display: flex;
@@ -791,58 +858,61 @@
 
     .categories-grid {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-      margin-top: 8px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 0;
     }
 
     .category-card {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 16px;
-      border-radius: 16px;
+      padding: 14px 12px;
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25), 0 2px 4px rgba(102, 126, 234, 0.15);
+      box-shadow: 0 3px 10px rgba(102, 126, 234, 0.25), 0 2px 4px rgba(102, 126, 234, 0.15);
       border: 2px solid transparent;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      align-items: center;
+      text-align: center;
+      gap: 6px;
     }
 
     .category-card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 12px 28px rgba(102, 126, 234, 0.35), 0 6px 12px rgba(102, 126, 234, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35), 0 4px 8px rgba(102, 126, 234, 0.2);
       border-color: rgba(255, 255, 255, 0.3);
       background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
     }
 
     .category-card:active {
-      transform: translateY(-3px);
+      transform: translateY(-2px);
     }
 
     .category-header {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
     }
 
     .category-icon {
-      font-size: 24px;
+      font-size: 22px;
       flex-shrink: 0;
     }
 
     .category-title {
-      font-size: 17px;
-      font-weight: 800;
-      letter-spacing: 0.2px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1px;
       flex: 1;
     }
 
     .category-subtitle {
-      font-size: 12px;
-      opacity: 0.95;
-      line-height: 1.5;
+      font-size: 10px;
+      opacity: 0.9;
+      line-height: 1.4;
       font-weight: 500;
       margin-top: 0;
     }
@@ -1513,6 +1583,27 @@
       color: #9ca3af;
     }
 
+    body.dark-mode .ai-search-title {
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .beta-badge {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #78350f;
+    }
+
+    body.dark-mode .divider-line {
+      background: linear-gradient(90deg, transparent, #374151 20%, #374151 80%, transparent);
+    }
+
+    body.dark-mode .divider-text {
+      color: #6b7280;
+    }
+
+    body.dark-mode .quick-actions-header {
+      color: #9ca3af;
+    }
+
     body.dark-mode .ai-search-loading {
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
     }
@@ -1896,48 +1987,65 @@
 
       <!-- Categories View -->
       <div id="categoriesView" class="navigation-view">
-        <div class="categories-grid">
-          <div class="category-card" data-category="history">
-            <div class="category-header">
-              <div class="category-icon">📚</div>
-              <div class="category-title">Navigation & History</div>
+        <!-- AI Search Section - Primary Action -->
+        <div class="ai-search-section">
+          <div class="ai-search-container">
+            <div class="ai-search-header">
+              <span class="ai-search-title">AI Search</span>
+              <span class="beta-badge">Beta</span>
             </div>
-            <div class="category-subtitle">Tracing the path you've taken</div>
-          </div>
-          <div class="category-card" data-category="stats">
-            <div class="category-header">
-              <div class="category-icon">📊</div>
-              <div class="category-title">Stats</div>
+            <div class="search-container">
+              <input
+                type="text"
+                class="ai-search-bar"
+                id="aiSearchInput"
+                placeholder="Ask anything about your browsing history..."
+                title="AI-powered semantic search"
+              />
+              <a href="#" class="ai-search-submit" id="aiSearchSubmit" title="Search">
+                <span class="search-icon">🔍</span>
+              </a>
             </div>
-            <div class="category-subtitle">Quantifying your browsing behavior</div>
-          </div>
-          <div class="category-card" data-category="trends">
-            <div class="category-header">
-              <div class="category-icon">📈</div>
-              <div class="category-title">Trends</div>
+            <div class="search-hint">Ask questions like "What was that article about AI I read last week?"</div>
+            <div class="ai-search-loading" id="aiSearchLoading">
+              <span class="loading-spinner"></span>
+              Analyzing your browsing history...
             </div>
-            <div class="category-subtitle">Patterns that emerge over time</div>
           </div>
         </div>
 
-        <!-- AI Search Bar -->
-        <div class="ai-search-container">
-          <div class="search-container">
-            <input
-              type="text"
-              class="ai-search-bar"
-              id="aiSearchInput"
-              placeholder="Ask anything about your browsing history..."
-              title="AI-powered semantic search"
-            />
-            <a href="#" class="ai-search-submit" id="aiSearchSubmit" title="Search">
-              <span class="search-icon">🔍</span>
-            </a>
-          </div>
-          <div class="search-hint">AI-powered semantic search. Ask anything about your browsing history.</div>
-          <div class="ai-search-loading" id="aiSearchLoading">
-            <span class="loading-spinner"></span>
-            Analyzing your browsing history...
+        <!-- Divider -->
+        <div class="section-divider">
+          <span class="divider-line"></span>
+          <span class="divider-text">or browse</span>
+          <span class="divider-line"></span>
+        </div>
+
+        <!-- Quick Actions Section -->
+        <div class="quick-actions-section">
+          <div class="quick-actions-header">Quick Actions</div>
+          <div class="categories-grid">
+            <div class="category-card" data-category="history">
+              <div class="category-header">
+                <div class="category-icon">📚</div>
+                <div class="category-title">Navigation</div>
+              </div>
+              <div class="category-subtitle">Trace your browsing path</div>
+            </div>
+            <div class="category-card" data-category="stats">
+              <div class="category-header">
+                <div class="category-icon">📊</div>
+                <div class="category-title">Stats</div>
+              </div>
+              <div class="category-subtitle">View usage statistics</div>
+            </div>
+            <div class="category-card" data-category="trends">
+              <div class="category-header">
+                <div class="category-icon">📈</div>
+                <div class="category-title">Trends</div>
+              </div>
+              <div class="category-subtitle">Discover patterns</div>
+            </div>
           </div>
         </div>
       </div>
