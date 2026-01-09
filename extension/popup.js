@@ -2327,9 +2327,54 @@ function renderAIResult(query, plan, result, metadata = {}) {
       html += `<div style="max-height: 400px; overflow-y: auto;">`;
 
       result.forEach((item, index) => {
-        html += `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb; ${index === 0 ? 'border-top: 1px solid #e5e7eb;' : ''}">`;
+        const domainId = `domain-${index}`;
+        const visitCount = item.visit_count || item.count || 0;
+        const visits = item.visits || [];
+
+        // Group visits by normalized URL to get unique links with counts
+        const urlCounts = {};
+        visits.forEach(v => {
+          const normalizedUrl = normalizeUrl(v.url);
+          if (!urlCounts[normalizedUrl]) {
+            urlCounts[normalizedUrl] = {
+              url: normalizedUrl,
+              originalUrl: v.url, // Keep first original URL for display
+              title: v.title || normalizedUrl,
+              count: 0
+            };
+          }
+          urlCounts[normalizedUrl].count++;
+        });
+
+        const uniqueLinks = Object.values(urlCounts).sort((a, b) => b.count - a.count);
+
+        html += `<div class="expandable-domain-item" style="padding: 12px; border-bottom: 1px solid #e5e7eb; ${index === 0 ? 'border-top: 1px solid #e5e7eb;' : ''}">`;
+        html += `<div class="domain-header" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;" data-domain-id="${domainId}">`;
+        html += `<div style="flex: 1;">`;
         html += `<div style="font-weight: 600; margin-bottom: 4px;">${item.domain}</div>`;
-        html += `<div style="font-size: 12px; color: #6b7280;">${item.visit_count || item.count || 0} visit${(item.visit_count || item.count || 0) !== 1 ? 's' : ''}</div>`;
+        html += `<div style="font-size: 12px; color: #6b7280;">${visitCount} visit${visitCount !== 1 ? 's' : ''}</div>`;
+        html += `</div>`;
+        html += `<div class="expand-icon" style="font-size: 18px; color: #667eea; margin-left: 12px; transition: transform 0.2s;">+</div>`;
+        html += `</div>`;
+
+        // Collapsible links section
+        html += `<div class="domain-links" id="${domainId}" style="display: none; margin-top: 12px; padding-left: 8px; border-left: 3px solid #e5e7eb;">`;
+        if (uniqueLinks.length > 0) {
+          uniqueLinks.forEach(link => {
+            html += `<div style="padding: 8px 12px; margin-bottom: 6px; background: #f9fafb; border-radius: 6px;">`;
+            html += `<div style="display: flex; align-items: center; justify-content: space-between;">`;
+            html += `<div style="flex: 1; min-width: 0;">`;
+            html += `<a href="${link.originalUrl}" target="_blank" style="color: #667eea; text-decoration: none; font-weight: 600; font-size: 13px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${link.originalUrl}">${link.title || getUrlDisplayLabel(link.originalUrl)}</a>`;
+            html += `<div style="font-size: 11px; color: #9ca3af; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${link.originalUrl}</div>`;
+            html += `</div>`;
+            html += `<div style="font-weight: 700; color: #374151; font-size: 13px; margin-left: 12px; flex-shrink: 0;">${link.count}</div>`;
+            html += `</div>`;
+            html += `</div>`;
+          });
+        } else {
+          html += `<div style="padding: 8px; color: #9ca3af; font-size: 12px;">No links available</div>`;
+        }
+        html += `</div>`;
         html += `</div>`;
       });
 
@@ -2379,6 +2424,34 @@ function renderAIResult(query, plan, result, metadata = {}) {
 
   html += '</div></div></div>';
   output.innerHTML = html;
+
+  // Setup expand/collapse handlers for domain items
+  setupExpandableDomains();
+}
+
+function setupExpandableDomains() {
+  const domainHeaders = document.querySelectorAll('.domain-header');
+  domainHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const domainId = this.getAttribute('data-domain-id');
+      const linksContainer = document.getElementById(domainId);
+      const domainItem = this.closest('.expandable-domain-item');
+
+      if (linksContainer && domainItem) {
+        const isExpanded = domainItem.classList.contains('expanded');
+
+        if (isExpanded) {
+          // Collapse
+          linksContainer.style.display = 'none';
+          domainItem.classList.remove('expanded');
+        } else {
+          // Expand
+          linksContainer.style.display = 'block';
+          domainItem.classList.add('expanded');
+        }
+      }
+    });
+  });
 }
 
 function renderResult(operation, result, timeRangeInfo = null) {
