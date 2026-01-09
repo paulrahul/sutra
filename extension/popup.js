@@ -2427,6 +2427,9 @@ function renderAIResult(query, plan, result, metadata = {}) {
 
   // Setup expand/collapse handlers for domain items
   setupExpandableDomains();
+
+  // Persist state for restoration
+  saveAIResultState(query, plan, result, metadata);
 }
 
 function setupExpandableDomains() {
@@ -2457,7 +2460,7 @@ function setupExpandableDomains() {
 function renderResult(operation, result, timeRangeInfo = null) {
   const output = document.getElementById("output");
 
-  if (result.error) {
+  if (result && result.error) {
     // Extract context from result for better error messages
     const context = {
       anchorDomain: result.anchor_domain,
@@ -2466,6 +2469,7 @@ function renderResult(operation, result, timeRangeInfo = null) {
       field: result.field
     };
     showError(result.error, context);
+    // Don't persist error states
     return;
   }
 
@@ -2533,6 +2537,9 @@ function renderResult(operation, result, timeRangeInfo = null) {
       // Fallback to JSON for operations without specific renderers
       output.innerHTML = `<div class="card"><div class="card-header">Result ${formatTimeRangeForHeader(timeRangeInfo)}</div><pre style="background: #f8f9fa; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${JSON.stringify(result, null, 2)}</pre></div>`;
   }
+
+  // Persist state for restoration
+  saveLocalResultState(operation, result, timeRangeInfo);
 }
 
 
@@ -5109,15 +5116,78 @@ function initAISearch() {
   // searchInput.focus();
 }
 
+// ============================================================================
+// State Persistence
+// ============================================================================
+
+/**
+ * Save AI search result state to chrome.storage.local
+ */
+function saveAIResultState(query, plan, result, metadata = {}) {
+  const state = {
+    type: 'ai',
+    query,
+    plan,
+    result,
+    metadata,
+    timestamp: Date.now()
+  };
+  chrome.storage.local.set({ lastResultState: state });
+}
+
+/**
+ * Save local operation result state to chrome.storage.local
+ */
+function saveLocalResultState(operation, result, timeRangeInfo = null) {
+  const state = {
+    type: 'local',
+    operation,
+    result,
+    timeRangeInfo,
+    timestamp: Date.now()
+  };
+  chrome.storage.local.set({ lastResultState: state });
+}
+
+/**
+ * Restore last result state from chrome.storage.local
+ */
+function restoreLastResultState() {
+  chrome.storage.local.get(['lastResultState'], (items) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error restoring state:', chrome.runtime.lastError);
+      return;
+    }
+
+    const state = items.lastResultState;
+    if (!state) {
+      return; // No saved state
+    }
+
+    // Restore based on state type
+    if (state.type === 'ai') {
+      if (typeof renderAIResult !== 'undefined' && state.query && state.result !== undefined) {
+        renderAIResult(state.query, state.plan, state.result, state.metadata || {});
+      }
+    } else if (state.type === 'local') {
+      if (typeof renderResult !== 'undefined' && state.operation && state.result !== undefined) {
+        renderResult(state.operation, state.result, state.timeRangeInfo || null);
+      }
+    }
+  });
+}
+
 // Initialize rotating placeholder when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     initRotatingPlaceholder();
     registerAllOperations();
     initAISearch();
+    restoreLastResultState();
   });
 } else {
   initRotatingPlaceholder();
   registerAllOperations();
   initAISearch();
+  restoreLastResultState();
 }
