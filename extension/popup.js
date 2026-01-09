@@ -2243,16 +2243,39 @@ function formatTimeRangeForHeader(timeRangeInfo) {
  * @param {string} query - Original user query
  * @param {Object} plan - Execution plan
  * @param {*} result - Execution result
- * @param {Object} metadata - Additional metadata
+ * @param {Object} metadata - Additional metadata (includes isPreviousResult flag)
  */
 function renderAIResult(query, plan, result, metadata = {}) {
-  const output = document.getElementById("output");
+  const output = document.getElementById("aiSearchOutput");
   if (!output) return;
 
-  let html = '<div class="result-container">';
+  const isPreviousResult = metadata.isPreviousResult === true;
+
+  let html = '<div class="result-container" style="margin-top: 16px;">';
   html += '<div class="card">';
-  html += `<div class="card-header">AI Search Results</div>`;
-  html += '<div class="card-content" style="padding: 16px;">';
+
+  // Header with optional "Previous result" indicator
+  // For previous results, wrap in <details> to make it collapsible
+  if (isPreviousResult) {
+    // Hide default details marker (only add once per result container)
+    html += `<style>
+      .result-container details summary::-webkit-details-marker {
+        display: none;
+      }
+      .result-container details summary::marker {
+        display: none;
+      }
+    </style>`;
+    html += `<details style="cursor: pointer;">`;
+    html += `<summary class="card-header" style="display: flex; align-items: center; justify-content: space-between; list-style: none;">`;
+    html += `<span>AI Search Results</span>`;
+    html += `<span class="previous-result-badge">Previous result</span>`;
+    html += `</summary>`;
+    html += '<div class="card-content" style="padding: 16px;">';
+  } else {
+    html += `<div class="card-header">AI Search Results</div>`;
+    html += '<div class="card-content" style="padding: 16px;">';
+  }
 
   // Show query
   html += `<div style="margin-bottom: 16px;">`;
@@ -2278,7 +2301,11 @@ function renderAIResult(query, plan, result, metadata = {}) {
       html += `<br><span style="font-size: 12px;">${result.message}</span>`;
     }
     html += `</div>`;
-    html += '</div></div></div>';
+    html += '</div>'; // card-content
+    if (isPreviousResult) {
+      html += '</details>';
+    }
+    html += '</div></div>'; // card, result-container
     output.innerHTML = html;
     return;
   }
@@ -2289,7 +2316,11 @@ function renderAIResult(query, plan, result, metadata = {}) {
     html += `<div class="empty-state-icon">📭</div>`;
     html += `<div>No results found</div>`;
     html += `</div>`;
-    html += '</div></div></div>';
+    html += '</div>'; // card-content
+    if (isPreviousResult) {
+      html += '</details>';
+    }
+    html += '</div></div>'; // card, result-container
     output.innerHTML = html;
     return;
   }
@@ -2422,7 +2453,11 @@ function renderAIResult(query, plan, result, metadata = {}) {
     html += `<div style="margin-top: 12px; font-size: 14px;">${result}</div>`;
   }
 
-  html += '</div></div></div>';
+  html += '</div>'; // card-content
+  if (isPreviousResult) {
+    html += '</details>';
+  }
+  html += '</div></div>'; // card, result-container
   output.innerHTML = html;
 
   // Setup expand/collapse handlers for domain items
@@ -5191,7 +5226,9 @@ function restoreLastResultState() {
     // Restore based on state type
     if (state.type === 'ai') {
       if (typeof renderAIResult !== 'undefined' && state.query && state.result !== undefined) {
-        renderAIResult(state.query, state.plan, state.result, state.metadata || {});
+        // Mark as previous result when restoring
+        const metadata = { ...(state.metadata || {}), isPreviousResult: true };
+        renderAIResult(state.query, state.plan, state.result, metadata);
       }
     } else if (state.type === 'local') {
       if (typeof renderResult !== 'undefined' && state.operation && state.result !== undefined) {

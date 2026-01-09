@@ -920,7 +920,7 @@
     .navigation-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 14px;
       margin-bottom: 20px;
       padding-bottom: 16px;
       border-bottom: 2px solid #f0f0f0;
@@ -943,6 +943,7 @@
       min-width: 40px;
       height: 40px;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      flex-shrink: 0;
     }
 
     .back-button:hover {
@@ -959,6 +960,26 @@
       color: #111827;
       flex: 1;
       letter-spacing: -0.3px;
+    }
+
+    /* Settings section description */
+    .settings-section-description {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+      margin-bottom: 16px;
+      margin-top: 4px;
+    }
+
+    /* Previous result badge */
+    .previous-result-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      background: #f3f4f6;
+      padding: 4px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.2px;
     }
 
     .operations-list {
@@ -1604,6 +1625,15 @@
       color: #9ca3af;
     }
 
+    body.dark-mode .settings-section-description {
+      color: #9ca3af;
+    }
+
+    body.dark-mode .previous-result-badge {
+      color: #9ca3af;
+      background: #374151;
+    }
+
     body.dark-mode .ai-search-loading {
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
     }
@@ -2012,6 +2042,8 @@
               Analyzing your browsing history...
             </div>
           </div>
+          <!-- AI Search Results appear here -->
+          <div id="aiSearchOutput"></div>
         </div>
 
         <!-- Divider -->
@@ -2053,8 +2085,8 @@
       <!-- Operations View -->
       <div id="operationsView" class="navigation-view" style="display: none;">
         <div class="navigation-header">
+          <button class="back-button" id="backToCategories" title="Back to home">←</button>
           <div class="view-title" id="operationsViewTitle"></div>
-          <button class="back-button" id="backToCategories">←</button>
         </div>
         <div class="operations-list" id="operationsList"></div>
       </div>
@@ -2062,8 +2094,8 @@
       <!-- Operation Form View -->
       <div id="operationFormView" class="navigation-view" style="display: none;">
         <div class="navigation-header">
+          <button class="back-button" id="backToOperations" title="Back to list">←</button>
           <div class="view-title" id="operationFormViewTitle"></div>
-          <button class="back-button" id="backToOperations">←</button>
         </div>
         <div id="operationFormViewHelp" class="operation-help" style="margin-bottom: 16px; color: #6c757d; font-size: 13px; line-height: 1.5;"></div>
         <div id="operationFormContainer"></div>
@@ -2072,15 +2104,16 @@
       <!-- Settings View -->
       <div id="settingsView" class="navigation-view settings-view" style="display: none;">
         <div class="navigation-header">
+          <button class="back-button" id="backFromSettings" title="Back to home">←</button>
           <div class="view-title">Settings</div>
-          <button class="back-button" id="backFromSettings">←</button>
         </div>
         <div id="settingsContainer">
           <!-- LLM Configuration -->
           <div class="category-item" style="margin-bottom: 24px;">
             <div class="category-item-header">
-              <div class="category-item-name">AI Search Configuration</div>
+              <div class="category-item-name">AI Search <span class="beta-badge">Beta</span></div>
             </div>
+            <div class="settings-section-description">Configure your AI provider to enable natural language search across your browsing history.</div>
             <div class="form-group" style="margin-bottom: 16px;">
               <label style="font-weight: 600; display: block; margin-bottom: 4px;">LLM Provider</label>
               <div class="radio-group">
