@@ -72,6 +72,11 @@ function buildUserPrompt(query) {
  * @returns {Object} Parsed execution plan
  */
 function parseLLMResponse(response) {
+  // Handle empty response
+  if (!response || !response.trim()) {
+    throw new Error('EMPTY_LLM_RESPONSE');
+  }
+
   // Try to extract JSON from response (might be wrapped in markdown code blocks)
   let jsonStr = response.trim();
 
@@ -86,7 +91,7 @@ function parseLLMResponse(response) {
 
     // Validate plan structure
     if (!plan.steps || !Array.isArray(plan.steps)) {
-      throw new Error(`Execution plan must have "steps" array: ${jsonStr}`);
+      throw new Error('INVALID_PLAN_STRUCTURE');
     }
 
     return plan;
@@ -95,13 +100,67 @@ function parseLLMResponse(response) {
     const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
-        return JSON.parse(jsonMatch[0]);
+        const plan = JSON.parse(jsonMatch[0]);
+        if (!plan.steps || !Array.isArray(plan.steps)) {
+          throw new Error('INVALID_PLAN_STRUCTURE');
+        }
+        return plan;
       } catch (e) {
-        throw new Error(`Failed to parse LLM response as JSON: ${error.message}`);
+        throw new Error('PARSE_ERROR');
       }
     }
-    throw new Error(`Failed to parse LLM response as JSON: ${error.message}`);
+    throw new Error('PARSE_ERROR');
   }
+}
+
+/**
+ * Convert error codes/messages to user-friendly messages
+ * @param {Error} error - The error object
+ * @returns {string} User-friendly error message
+ */
+function getUserFriendlyError(error) {
+  const message = error.message || '';
+
+  // Error code mappings
+  const errorMessages = {
+    'EMPTY_LLM_RESPONSE': 'The AI did not return a response. Please try again or check your AI configuration in Settings.',
+    'INVALID_PLAN_STRUCTURE': 'The AI returned an invalid response. Please try rephrasing your question.',
+    'PARSE_ERROR': 'Could not understand the AI response. Please try a simpler question or check your AI configuration.',
+    'Query cannot be empty': 'Please enter a question about your browsing history.',
+  };
+
+  // Check for exact matches first
+  if (errorMessages[message]) {
+    return errorMessages[message];
+  }
+
+  // Check for partial matches (connection/network errors)
+  if (message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('net::ERR')) {
+    return 'Cannot connect to the AI service. Please check that your AI provider is running and properly configured in Settings.';
+  }
+
+  if (message.includes('timeout') || message.includes('timed out')) {
+    return 'The AI is taking too long to respond. Please try again or use a faster model.';
+  }
+
+  if (message.includes('API key') || message.includes('api key') || message.includes('Unauthorized') || message.includes('401')) {
+    return 'Invalid or missing API key. Please check your API key in Settings.';
+  }
+
+  if (message.includes('rate limit') || message.includes('429')) {
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+
+  if (message.includes('model') && (message.includes('not found') || message.includes('does not exist'))) {
+    return 'The configured AI model was not found. Please check your model name in Settings.';
+  }
+
+  if (message.includes('LLM error 5') || message.includes('500') || message.includes('502') || message.includes('503')) {
+    return 'The AI service encountered an error. Please try again in a moment.';
+  }
+
+  // For any other errors, provide a generic but helpful message
+  return 'Something went wrong while processing your question. Please try again or check your AI configuration in Settings.';
 }
 
 /**
@@ -111,17 +170,17 @@ function parseLLMResponse(response) {
  */
 async function generatePlan(query) {
   if (!query || !query.trim()) {
-    throw new Error('Query cannot be empty');
+    throw new Error('Please enter a question about your browsing history.');
   }
 
   // Get operation metadata
   if (typeof getOperationMetadata === 'undefined') {
-    throw new Error('Operation registry not loaded');
+    throw new Error('AI Search is not properly initialized. Please reload the extension.');
   }
 
   const operations = getOperationMetadata();
   if (operations.length === 0) {
-    throw new Error('No operations registered');
+    throw new Error('AI Search is not properly initialized. Please reload the extension.');
   }
 
   // Build prompts
@@ -133,7 +192,7 @@ async function generatePlan(query) {
 
   // Call LLM
   if (typeof callLLM === 'undefined') {
-    throw new Error('LLM client not loaded');
+    throw new Error('AI Search is not properly initialized. Please reload the extension.');
   }
 
   try {
@@ -142,15 +201,13 @@ async function generatePlan(query) {
 
     // Additional validation
     if (plan.steps.length === 0) {
-      throw new Error('Execution plan must have at least one step');
+      throw new Error('The AI could not determine how to answer your question. Please try rephrasing it.');
     }
 
     return plan;
   } catch (error) {
-    if (error.message.includes('Cannot connect') || error.message.includes('API key')) {
-      throw error; // Re-throw configuration errors
-    }
-    throw new Error(`Failed to generate execution plan: ${error.message}`);
+    // Convert to user-friendly message
+    throw new Error(getUserFriendlyError(error));
   }
 }
 
