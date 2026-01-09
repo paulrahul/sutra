@@ -2238,6 +2238,629 @@ function formatTimeRangeForHeader(timeRangeInfo) {
   return `<span style="font-weight: 400; color: #667eea; font-size: 0.9em;">(${rangeText})</span>`;
 }
 
+// ============================================================================
+// AI Search Result Contextual Rendering
+// ============================================================================
+
+/**
+ * Detect query intent for rendering purposes
+ * Returns the type of answer expected based on the query
+ */
+function detectRenderIntent(query) {
+  if (!query) return { type: 'default', categories: [] };
+
+  const lowerQuery = query.toLowerCase();
+
+  // Time/duration queries
+  if (/how much time|time spent|time.*(spend|spending)|hours|duration/i.test(lowerQuery)) {
+    return { type: 'time_analysis', label: 'Time Analysis' };
+  }
+
+  // Topic/category queries
+  if (/what topic|which topic|topics|subject|categories|dominate|interests/i.test(lowerQuery)) {
+    return { type: 'topic_analysis', label: 'Topic Analysis' };
+  }
+
+  // Distraction queries
+  if (/distract|procrastinat|wast(e|ing)\s*time|unproductive/i.test(lowerQuery)) {
+    return { type: 'distraction_analysis', label: 'Distraction Analysis' };
+  }
+
+  // Pattern/habit queries
+  if (/pattern|habit|routine|returning|keep coming back|repeatedly/i.test(lowerQuery)) {
+    return { type: 'pattern_analysis', label: 'Pattern Analysis' };
+  }
+
+  // Stopped caring / abandoned queries
+  if (/stopped caring|abandoned|forgot|used to|no longer|stopped visiting/i.test(lowerQuery)) {
+    return { type: 'abandoned_analysis', label: 'Abandoned Interests' };
+  }
+
+  // Pending/unread queries
+  if (/pending|unread|to read|bookmarked|saved|long pending/i.test(lowerQuery)) {
+    return { type: 'pending_analysis', label: 'Pending Reading' };
+  }
+
+  // Intentionality queries
+  if (/intentional|purposeful|deliberate|focused|productive/i.test(lowerQuery)) {
+    return { type: 'intentionality_analysis', label: 'Browsing Intentionality' };
+  }
+
+  // Specific search queries (find, search, list, show links)
+  if (/find|search|list.*link|show.*link|related to|about/i.test(lowerQuery)) {
+    return { type: 'link_search', label: 'Search Results' };
+  }
+
+  return { type: 'default', label: 'Results' };
+}
+
+/**
+ * Compute statistics from visit results
+ */
+function computeVisitStats(visits) {
+  if (!visits || !Array.isArray(visits) || visits.length === 0) {
+    return null;
+  }
+
+  const stats = {
+    totalVisits: visits.length,
+    uniqueUrls: new Set(),
+    uniqueDomains: new Set(),
+    domainCounts: {},
+    categoryCounts: {},
+    dateRange: { earliest: null, latest: null }
+  };
+
+  visits.forEach(visit => {
+    // Count unique URLs
+    if (visit.url) {
+      stats.uniqueUrls.add(normalizeUrl(visit.url));
+      const domain = getDomain(visit.url);
+      if (domain) {
+        stats.uniqueDomains.add(domain);
+        stats.domainCounts[domain] = (stats.domainCounts[domain] || 0) + 1;
+
+        // Get category if available
+        const category = getCategory(domain);
+        if (category && category !== 'Other') {
+          stats.categoryCounts[category] = (stats.categoryCounts[category] || 0) + 1;
+        }
+      }
+    }
+
+    // Track date range
+    if (visit.visited_at) {
+      const visitDate = new Date(visit.visited_at);
+      if (!stats.dateRange.earliest || visitDate < stats.dateRange.earliest) {
+        stats.dateRange.earliest = visitDate;
+      }
+      if (!stats.dateRange.latest || visitDate > stats.dateRange.latest) {
+        stats.dateRange.latest = visitDate;
+      }
+    }
+  });
+
+  // Convert Sets to counts
+  stats.uniqueUrlCount = stats.uniqueUrls.size;
+  stats.uniqueDomainCount = stats.uniqueDomains.size;
+
+  // Sort domains by count
+  stats.topDomains = Object.entries(stats.domainCounts)
+    .map(([domain, count]) => ({ domain, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  // Sort categories by count
+  stats.topCategories = Object.entries(stats.categoryCounts)
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return stats;
+}
+
+/**
+ * Estimate time spent based on visits (rough heuristic: ~2 min per visit average)
+ */
+function estimateTimeSpent(visitCount) {
+  const avgMinutesPerVisit = 2;
+  const totalMinutes = visitCount * avgMinutesPerVisit;
+
+  if (totalMinutes < 60) {
+    return `~${totalMinutes} minutes`;
+  } else {
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return mins > 0 ? `~${hours}h ${mins}m` : `~${hours} hours`;
+  }
+}
+
+/**
+ * Render contextual insight card based on query type
+ */
+function renderContextualInsight(query, result, renderIntent) {
+  if (!result || !Array.isArray(result) || result.length === 0) {
+    return '';
+  }
+
+  // Check if result is already grouped by domain
+  const isGroupedByDomain = result.length > 0 && result[0].domain && result[0].visits;
+
+  let html = '';
+
+  switch (renderIntent.type) {
+    case 'time_analysis':
+      html = renderTimeAnalysisInsight(result, isGroupedByDomain);
+      break;
+    case 'topic_analysis':
+      html = renderTopicAnalysisInsight(result, isGroupedByDomain);
+      break;
+    case 'distraction_analysis':
+      html = renderDistractionInsight(result, isGroupedByDomain);
+      break;
+    case 'pattern_analysis':
+      html = renderPatternInsight(result, isGroupedByDomain);
+      break;
+    case 'intentionality_analysis':
+      html = renderIntentionalityInsight(result, isGroupedByDomain);
+      break;
+    default:
+      // For other types, compute basic stats
+      if (!isGroupedByDomain && result.length > 0 && result[0].url) {
+        const stats = computeVisitStats(result);
+        if (stats && stats.topDomains && Array.isArray(stats.topDomains) && stats.topDomains.length > 0) {
+          html = renderDefaultInsight(stats);
+        }
+      }
+  }
+
+  return html;
+}
+
+/**
+ * Render time analysis insight
+ */
+function renderTimeAnalysisInsight(result, isGroupedByDomain) {
+  let totalVisits = 0;
+  let categoryBreakdown = {};
+
+  if (isGroupedByDomain) {
+    result.forEach(item => {
+      const count = item.visit_count || item.count || (item.visits ? item.visits.length : 0);
+      totalVisits += count;
+      const category = getCategory(item.domain);
+      categoryBreakdown[category] = (categoryBreakdown[category] || 0) + count;
+    });
+  } else {
+    totalVisits = result.length;
+    const stats = computeVisitStats(result);
+    if (stats) {
+      categoryBreakdown = stats.categoryCounts;
+    }
+  }
+
+  const timeEstimate = estimateTimeSpent(totalVisits);
+
+  let html = `<div class="insight-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">`;
+  html += `<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">`;
+  html += `<span style="font-size: 28px;">⏱️</span>`;
+  html += `<div>`;
+  html += `<div style="font-size: 24px; font-weight: 700; color: #1f2937;">${timeEstimate}</div>`;
+  html += `<div style="font-size: 13px; color: #6b7280;">estimated time spent (${totalVisits} visits)</div>`;
+  html += `</div>`;
+  html += `</div>`;
+
+  // Category breakdown
+  const categories = Object.entries(categoryBreakdown).sort((a, b) => b[1] - a[1]);
+  if (categories.length > 0) {
+    html += `<div style="margin-top: 12px;">`;
+    html += `<div style="font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 8px; text-transform: uppercase;">Breakdown by Category</div>`;
+    categories.slice(0, 5).forEach(([category, count]) => {
+      const percentage = Math.round((count / totalVisits) * 100);
+      const time = estimateTimeSpent(count);
+      html += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05);">`;
+      html += `<span style="font-weight: 500; color: #374151;">${category}</span>`;
+      html += `<span style="color: #6b7280; font-size: 13px;">${time} (${percentage}%)</span>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+/**
+ * Render topic analysis insight
+ */
+function renderTopicAnalysisInsight(result, isGroupedByDomain) {
+  let categoryBreakdown = {};
+  let totalVisits = 0;
+
+  if (isGroupedByDomain) {
+    result.forEach(item => {
+      const count = item.visit_count || item.count || (item.visits ? item.visits.length : 0);
+      totalVisits += count;
+      const category = getCategory(item.domain);
+      if (!categoryBreakdown[category]) {
+        categoryBreakdown[category] = { count: 0, domains: [] };
+      }
+      categoryBreakdown[category].count += count;
+      categoryBreakdown[category].domains.push({ domain: item.domain, count });
+    });
+  } else {
+    totalVisits = result.length;
+    result.forEach(visit => {
+      const domain = getDomain(visit.url);
+      const category = getCategory(domain);
+      if (!categoryBreakdown[category]) {
+        categoryBreakdown[category] = { count: 0, domains: [] };
+      }
+      categoryBreakdown[category].count++;
+      const existing = categoryBreakdown[category].domains.find(d => d.domain === domain);
+      if (existing) {
+        existing.count++;
+      } else {
+        categoryBreakdown[category].domains.push({ domain, count: 1 });
+      }
+    });
+  }
+
+  const sortedCategories = Object.entries(categoryBreakdown)
+    .map(([category, data]) => ({ category, ...data }))
+    .sort((a, b) => b.count - a.count);
+
+  const topCategory = sortedCategories[0];
+
+  let html = `<div class="insight-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">`;
+  html += `<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">`;
+  html += `<span style="font-size: 28px;">📊</span>`;
+  html += `<div>`;
+  html += `<div style="font-size: 18px; font-weight: 700; color: #1f2937;">${sortedCategories.length} Topics Identified</div>`;
+  html += `<div style="font-size: 13px; color: #6b7280;">Top topic: <strong>${topCategory?.category || 'Unknown'}</strong> (${Math.round((topCategory?.count / totalVisits) * 100)}%)</div>`;
+  html += `</div>`;
+  html += `</div>`;
+
+  // Topic breakdown with expandable domains
+  html += `<div style="margin-top: 12px;">`;
+  sortedCategories.slice(0, 6).forEach((cat, index) => {
+    const percentage = Math.round((cat.count / totalVisits) * 100);
+    const catId = `topic-${index}`;
+    html += `<div class="expandable-topic-item" style="margin-bottom: 8px; background: white; border-radius: 8px; overflow: hidden;">`;
+    html += `<div class="topic-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; cursor: pointer;" data-topic-id="${catId}">`;
+    html += `<div style="display: flex; align-items: center; gap: 10px; flex: 1;">`;
+    html += `<div style="width: ${Math.max(percentage * 2, 20)}px; height: 8px; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px;"></div>`;
+    html += `<span style="font-weight: 600; color: #374151;">${cat.category}</span>`;
+    html += `</div>`;
+    html += `<div style="display: flex; align-items: center; gap: 8px;">`;
+    html += `<span style="color: #6b7280; font-size: 13px;">${cat.count} visits (${percentage}%)</span>`;
+    html += `<span class="expand-icon" style="color: #667eea; font-size: 14px;">+</span>`;
+    html += `</div>`;
+    html += `</div>`;
+
+    // Expandable domains list
+    html += `<div class="topic-domains" id="${catId}" style="display: none; padding: 0 12px 10px 12px; border-top: 1px solid #f3f4f6;">`;
+    if (cat.domains && Array.isArray(cat.domains)) {
+      cat.domains.sort((a, b) => b.count - a.count).slice(0, 5).forEach(d => {
+        html += `<div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;">`;
+        html += `<span style="color: #667eea;">${d.domain}</span>`;
+        html += `<span style="color: #9ca3af;">${d.count}</span>`;
+        html += `</div>`;
+      });
+    }
+    html += `</div>`;
+    html += `</div>`;
+  });
+  html += `</div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+/**
+ * Render distraction analysis insight
+ */
+function renderDistractionInsight(result, isGroupedByDomain) {
+  const distractingCategories = ['Social', 'Entertainment', 'Other'];
+  let distractionData = {};
+  let totalVisits = 0;
+
+  if (isGroupedByDomain) {
+    result.forEach(item => {
+      const count = item.visit_count || item.count || (item.visits ? item.visits.length : 0);
+      totalVisits += count;
+      const category = getCategory(item.domain);
+      if (!distractionData[category]) {
+        distractionData[category] = { count: 0, domains: [] };
+      }
+      distractionData[category].count += count;
+      distractionData[category].domains.push({ domain: item.domain, count, visits: item.visits || [] });
+    });
+  } else {
+    totalVisits = result.length;
+    result.forEach(visit => {
+      const domain = getDomain(visit.url);
+      const category = getCategory(domain);
+      if (!distractionData[category]) {
+        distractionData[category] = { count: 0, domains: [] };
+      }
+      distractionData[category].count++;
+      const existing = distractionData[category].domains.find(d => d.domain === domain);
+      if (existing) {
+        existing.count++;
+        existing.visits.push(visit);
+      } else {
+        distractionData[category].domains.push({ domain, count: 1, visits: [visit] });
+      }
+    });
+  }
+
+  const sortedCategories = Object.entries(distractionData)
+    .map(([category, data]) => ({ category, ...data }))
+    .sort((a, b) => b.count - a.count);
+
+  const timeEstimate = estimateTimeSpent(totalVisits);
+
+  let html = `<div class="insight-card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">`;
+  html += `<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">`;
+  html += `<span style="font-size: 28px;">🎯</span>`;
+  html += `<div>`;
+  html += `<div style="font-size: 18px; font-weight: 700; color: #1f2937;">Distraction Analysis</div>`;
+  html += `<div style="font-size: 13px; color: #6b7280;">${timeEstimate} spent on potentially distracting content</div>`;
+  html += `</div>`;
+  html += `</div>`;
+
+  // Category breakdown with expandable domains
+  html += `<div style="margin-top: 12px;">`;
+  html += `<div style="font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 8px; text-transform: uppercase;">What's Distracting You</div>`;
+
+  sortedCategories.slice(0, 5).forEach((cat, index) => {
+    const percentage = Math.round((cat.count / totalVisits) * 100);
+    const catId = `distract-${index}`;
+
+    html += `<div class="expandable-distraction-item" style="margin-bottom: 8px; background: white; border-radius: 8px; overflow: hidden;">`;
+    html += `<div class="distraction-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; cursor: pointer;" data-distraction-id="${catId}">`;
+    html += `<div style="display: flex; align-items: center; gap: 10px; flex: 1;">`;
+    html += `<span style="font-weight: 600; color: #374151;">${cat.category}</span>`;
+    html += `</div>`;
+    html += `<div style="display: flex; align-items: center; gap: 8px;">`;
+    html += `<span style="color: #ef4444; font-weight: 600; font-size: 13px;">${percentage}%</span>`;
+    html += `<span style="color: #6b7280; font-size: 12px;">(${cat.count} visits)</span>`;
+    html += `<span class="expand-icon" style="color: #667eea; font-size: 14px;">+</span>`;
+    html += `</div>`;
+    html += `</div>`;
+
+    // Expandable domains
+    html += `<div class="distraction-domains" id="${catId}" style="display: none; padding: 0 12px 10px 12px; border-top: 1px solid #f3f4f6;">`;
+    if (cat.domains && Array.isArray(cat.domains)) {
+      cat.domains.sort((a, b) => b.count - a.count).slice(0, 8).forEach(d => {
+        html += `<div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px;">`;
+        html += `<span style="color: #667eea;">${d.domain}</span>`;
+        html += `<span style="color: #9ca3af;">${d.count} visits</span>`;
+        html += `</div>`;
+      });
+    }
+    html += `</div>`;
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  html += `</div>`;
+  return html;
+}
+
+/**
+ * Render pattern analysis insight
+ */
+function renderPatternInsight(result, isGroupedByDomain) {
+  let domainVisits = {};
+  let totalVisits = 0;
+
+  if (isGroupedByDomain) {
+    result.forEach(item => {
+      const count = item.visit_count || item.count || (item.visits ? item.visits.length : 0);
+      totalVisits += count;
+      domainVisits[item.domain] = { count, visits: item.visits || [] };
+    });
+  } else {
+    totalVisits = result.length;
+    result.forEach(visit => {
+      const domain = getDomain(visit.url);
+      if (!domainVisits[domain]) {
+        domainVisits[domain] = { count: 0, visits: [] };
+      }
+      domainVisits[domain].count++;
+      domainVisits[domain].visits.push(visit);
+    });
+  }
+
+  const sortedDomains = Object.entries(domainVisits)
+    .map(([domain, data]) => ({ domain, ...data }))
+    .sort((a, b) => b.count - a.count);
+
+  const repeatVisitors = sortedDomains.filter(d => d.count > 1);
+
+  let html = `<div class="insight-card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">`;
+  html += `<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">`;
+  html += `<span style="font-size: 28px;">🔄</span>`;
+  html += `<div>`;
+  html += `<div style="font-size: 18px; font-weight: 700; color: #1f2937;">Browsing Patterns</div>`;
+  html += `<div style="font-size: 13px; color: #6b7280;">${repeatVisitors.length} sites you keep returning to</div>`;
+  html += `</div>`;
+  html += `</div>`;
+
+  // Top repeat sites
+  html += `<div style="margin-top: 12px;">`;
+  html += `<div style="font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 8px; text-transform: uppercase;">Sites You Visit Most</div>`;
+
+  sortedDomains.slice(0, 8).forEach((item, index) => {
+    const barWidth = Math.max((item.count / sortedDomains[0].count) * 100, 10);
+    html += `<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">`;
+    html += `<div style="width: 120px; font-size: 13px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.domain}">${item.domain}</div>`;
+    html += `<div style="flex: 1; height: 20px; background: #f3f4f6; border-radius: 4px; overflow: hidden;">`;
+    html += `<div style="width: ${barWidth}%; height: 100%; background: linear-gradient(90deg, #fbbf24, #f59e0b); display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;">`;
+    html += `<span style="font-size: 11px; font-weight: 600; color: #78350f;">${item.count}</span>`;
+    html += `</div>`;
+    html += `</div>`;
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  html += `</div>`;
+  return html;
+}
+
+/**
+ * Render intentionality analysis insight
+ */
+function renderIntentionalityInsight(result, isGroupedByDomain) {
+  const productiveCategories = ['Work', 'Development', 'Learning', 'Reference', 'Productivity'];
+  const distractingCategories = ['Social', 'Entertainment'];
+
+  let productiveCount = 0;
+  let distractingCount = 0;
+  let totalVisits = 0;
+
+  if (isGroupedByDomain) {
+    result.forEach(item => {
+      const count = item.visit_count || item.count || (item.visits ? item.visits.length : 0);
+      totalVisits += count;
+      const category = getCategory(item.domain);
+      if (productiveCategories.includes(category)) {
+        productiveCount += count;
+      } else if (distractingCategories.includes(category)) {
+        distractingCount += count;
+      }
+    });
+  } else {
+    totalVisits = result.length;
+    result.forEach(visit => {
+      const domain = getDomain(visit.url);
+      const category = getCategory(domain);
+      if (productiveCategories.includes(category)) {
+        productiveCount++;
+      } else if (distractingCategories.includes(category)) {
+        distractingCount++;
+      }
+    });
+  }
+
+  const productivePercent = totalVisits > 0 ? Math.round((productiveCount / totalVisits) * 100) : 0;
+  const distractingPercent = totalVisits > 0 ? Math.round((distractingCount / totalVisits) * 100) : 0;
+  const neutralPercent = 100 - productivePercent - distractingPercent;
+
+  let intentScore = 'Moderate';
+  let intentColor = '#f59e0b';
+  let intentEmoji = '😐';
+
+  if (productivePercent >= 60) {
+    intentScore = 'Highly Intentional';
+    intentColor = '#10b981';
+    intentEmoji = '🎯';
+  } else if (productivePercent >= 40) {
+    intentScore = 'Moderately Intentional';
+    intentColor = '#3b82f6';
+    intentEmoji = '👍';
+  } else if (distractingPercent >= 50) {
+    intentScore = 'Needs Improvement';
+    intentColor = '#ef4444';
+    intentEmoji = '⚠️';
+  }
+
+  let html = `<div class="insight-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%); padding: 16px; border-radius: 12px; margin-bottom: 16px;">`;
+  html += `<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">`;
+  html += `<span style="font-size: 28px;">${intentEmoji}</span>`;
+  html += `<div>`;
+  html += `<div style="font-size: 18px; font-weight: 700; color: ${intentColor};">${intentScore}</div>`;
+  html += `<div style="font-size: 13px; color: #6b7280;">Based on ${totalVisits} visits analyzed</div>`;
+  html += `</div>`;
+  html += `</div>`;
+
+  // Visual breakdown bar
+  html += `<div style="margin-bottom: 12px;">`;
+  html += `<div style="display: flex; height: 24px; border-radius: 6px; overflow: hidden;">`;
+  if (productivePercent > 0) {
+    html += `<div style="width: ${productivePercent}%; background: #10b981; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600;">${productivePercent}%</div>`;
+  }
+  if (neutralPercent > 0) {
+    html += `<div style="width: ${neutralPercent}%; background: #9ca3af; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600;">${neutralPercent}%</div>`;
+  }
+  if (distractingPercent > 0) {
+    html += `<div style="width: ${distractingPercent}%; background: #ef4444; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600;">${distractingPercent}%</div>`;
+  }
+  html += `</div>`;
+  html += `</div>`;
+
+  // Legend
+  html += `<div style="display: flex; gap: 16px; font-size: 12px;">`;
+  html += `<div style="display: flex; align-items: center; gap: 4px;"><span style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></span> Productive</div>`;
+  html += `<div style="display: flex; align-items: center; gap: 4px;"><span style="width: 12px; height: 12px; background: #9ca3af; border-radius: 2px;"></span> Neutral</div>`;
+  html += `<div style="display: flex; align-items: center; gap: 4px;"><span style="width: 12px; height: 12px; background: #ef4444; border-radius: 2px;"></span> Distracting</div>`;
+  html += `</div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+/**
+ * Render default insight with basic stats
+ */
+function renderDefaultInsight(stats) {
+  let html = `<div class="insight-card" style="background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: 16px;">`;
+  html += `<div style="display: flex; gap: 24px; flex-wrap: wrap;">`;
+
+  html += `<div style="text-align: center;">`;
+  html += `<div style="font-size: 24px; font-weight: 700; color: #667eea;">${stats.totalVisits}</div>`;
+  html += `<div style="font-size: 12px; color: #6b7280;">Total Visits</div>`;
+  html += `</div>`;
+
+  html += `<div style="text-align: center;">`;
+  html += `<div style="font-size: 24px; font-weight: 700; color: #667eea;">${stats.uniqueDomainCount}</div>`;
+  html += `<div style="font-size: 12px; color: #6b7280;">Unique Sites</div>`;
+  html += `</div>`;
+
+  html += `<div style="text-align: center;">`;
+  html += `<div style="font-size: 24px; font-weight: 700; color: #667eea;">${stats.uniqueUrlCount}</div>`;
+  html += `<div style="font-size: 12px; color: #6b7280;">Unique Pages</div>`;
+  html += `</div>`;
+
+  html += `</div>`;
+  html += `</div>`;
+  return html;
+}
+
+/**
+ * Setup expandable handlers for contextual insights
+ */
+function setupContextualInsightHandlers() {
+  // Topic expanders
+  document.querySelectorAll('.topic-header').forEach(header => {
+    header.addEventListener('click', function() {
+      const topicId = this.getAttribute('data-topic-id');
+      const content = document.getElementById(topicId);
+      const icon = this.querySelector('.expand-icon');
+      if (content) {
+        const isHidden = content.style.display === 'none';
+        content.style.display = isHidden ? 'block' : 'none';
+        if (icon) icon.textContent = isHidden ? '−' : '+';
+      }
+    });
+  });
+
+  // Distraction expanders
+  document.querySelectorAll('.distraction-header').forEach(header => {
+    header.addEventListener('click', function() {
+      const id = this.getAttribute('data-distraction-id');
+      const content = document.getElementById(id);
+      const icon = this.querySelector('.expand-icon');
+      if (content) {
+        const isHidden = content.style.display === 'none';
+        content.style.display = isHidden ? 'block' : 'none';
+        if (icon) icon.textContent = isHidden ? '−' : '+';
+      }
+    });
+  });
+}
+
 /**
  * Render AI search results
  * @param {string} query - Original user query
@@ -2284,7 +2907,7 @@ function renderAIResult(query, plan, result, metadata = {}) {
   html += `</div>`;
 
   // Show execution plan (collapsible)
-  if (plan && plan.steps) {
+  if (plan && plan.steps && Array.isArray(plan.steps)) {
     html += `<details style="margin-bottom: 16px;">`;
     html += `<summary style="cursor: pointer; font-size: 13px; color: #667eea; font-weight: 600; margin-bottom: 8px;">Execution Plan (${plan.steps.length} step${plan.steps.length !== 1 ? 's' : ''})</summary>`;
     html += `<div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-top: 8px; font-size: 12px; font-family: monospace;">`;
@@ -2323,6 +2946,17 @@ function renderAIResult(query, plan, result, metadata = {}) {
     html += '</div></div>'; // card, result-container
     output.innerHTML = html;
     return;
+  }
+
+  // Detect query intent for contextual rendering
+  const renderIntent = detectRenderIntent(query);
+
+  // Render contextual insight based on query type
+  if (Array.isArray(result)) {
+    const insightHtml = renderContextualInsight(query, result, renderIntent);
+    if (insightHtml) {
+      html += insightHtml;
+    }
   }
 
   // Render results based on type
@@ -2462,6 +3096,9 @@ function renderAIResult(query, plan, result, metadata = {}) {
 
   // Setup expand/collapse handlers for domain items
   setupExpandableDomains();
+
+  // Setup expand/collapse handlers for contextual insights
+  setupContextualInsightHandlers();
 
   // Persist state for restoration
   saveAIResultState(query, plan, result, metadata);
