@@ -2439,6 +2439,7 @@ function setupExpandableDomains() {
       const domainId = this.getAttribute('data-domain-id');
       const linksContainer = document.getElementById(domainId);
       const domainItem = this.closest('.expandable-domain-item');
+      const expandIcon = this.querySelector('.expand-icon');
 
       if (linksContainer && domainItem) {
         const isExpanded = domainItem.classList.contains('expanded');
@@ -2447,10 +2448,16 @@ function setupExpandableDomains() {
           // Collapse
           linksContainer.style.display = 'none';
           domainItem.classList.remove('expanded');
+          if (expandIcon) {
+            expandIcon.textContent = '+';
+          }
         } else {
           // Expand
           linksContainer.style.display = 'block';
           domainItem.classList.add('expanded');
+          if (expandIcon) {
+            expandIcon.textContent = 'x';
+          }
         }
       }
     });
@@ -4275,7 +4282,7 @@ async function executeQuery() {
     return;
   }
 
-  showLoading();
+  // showLoading();
 
   // Operations that support date range selection
   const dateRangeOperations = [
@@ -4973,6 +4980,12 @@ async function handleAISearch() {
     return; // Empty query, do nothing
   }
 
+  // Clear previous search results from UI immediately
+  const output = document.getElementById('output');
+  if (output) {
+    output.innerHTML = '';
+  }
+
   // Show loading state
   if (searchInput) {
     searchInput.classList.add('loading');
@@ -4984,8 +4997,14 @@ async function handleAISearch() {
     submitButton.disabled = true;
   }
 
+  // Show loading message below search bar
+  const loadingMessage = document.getElementById('aiSearchLoading');
+  if (loadingMessage) {
+    loadingMessage.classList.add('visible');
+  }
+
   try {
-    showLoading();
+    // showLoading();
 
     // Check LLM configuration
     if (typeof getLLMConfig === 'undefined') {
@@ -5080,6 +5099,11 @@ async function handleAISearch() {
     }
     if (submitButton) {
       submitButton.disabled = false;
+    }
+    // Hide loading message below search bar
+    const loadingMessage = document.getElementById('aiSearchLoading');
+    if (loadingMessage) {
+      loadingMessage.classList.remove('visible');
     }
     hideLoading();
   }

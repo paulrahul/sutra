@@ -45,6 +45,7 @@ Rules:
 9. Use "find_distracting_content" for queries about distracting content
 10. Use "find_stopped_caring" for queries about abandoned domains
 11. Always use "group_by" to aggregate the urls in the results by domain, url, or date based on what suits the query best.
+12. Do not use "top_domains" unless explicitly asked for by the user.
 
 Time values for get_history:
 - "yesterday" - visits from yesterday
