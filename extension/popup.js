@@ -2934,7 +2934,7 @@ async function initializeLLMConfig() {
   const apiKey = document.getElementById('llmApiKey');
   const cloudModel = document.getElementById('cloudLLMModel');
 
-  if (localEndpoint) localEndpoint.value = config.localEndpoint || 'http://localhost:11434/api/generate';
+  if (localEndpoint) localEndpoint.value = config.localEndpoint || 'http://localhost:11434/api/chat';
   if (localModel) localModel.value = config.model || 'llama3';
   if (cloudProvider) cloudProvider.value = config.cloudProvider || 'openai';
   if (apiKey) apiKey.value = config.apiKey || '';

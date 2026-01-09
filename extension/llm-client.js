@@ -10,7 +10,7 @@ async function getLLMConfig() {
     chrome.storage.local.get(['llmProvider', 'localLLMEndpoint', 'cloudProvider', 'apiKey', 'model'], (result) => {
       resolve({
         provider: result.llmProvider || 'local',
-        localEndpoint: result.localLLMEndpoint || 'http://localhost:11434/api/generate',
+        localEndpoint: result.localLLMEndpoint || 'http://localhost:11434/api/chat',
         cloudProvider: result.cloudProvider || 'openai',
         apiKey: result.apiKey || '',
         model: result.model || 'llama3'
@@ -52,7 +52,7 @@ async function callLocalLLM(prompt, config) {
 }
 
 // async function callLocalLLM(prompt, config) {
-//   const endpoint = config.localEndpoint || 'http://localhost:11434/api/generate';
+//   const endpoint = config.localEndpoint || 'http://localhost:11434/api/chat';
 //   const model = config.model || 'llama3';
 //   const timeout = config.timeout || 60000; // 1 minute default timeout
 
