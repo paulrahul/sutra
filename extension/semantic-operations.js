@@ -141,6 +141,12 @@ const SHORT_WORD_SIGNIFICANCE_CACHE = new Map();
 // Pending LLM significance requests (to avoid duplicate concurrent requests)
 const PENDING_SIGNIFICANCE_REQUESTS = new Map();
 
+// Cache for LLM-based acronym detection
+const ACRONYM_DETECTION_CACHE = new Map();
+
+// Pending LLM acronym detection requests
+const PENDING_ACRONYM_REQUESTS = new Map();
+
 /**
  * Check if a short word is significant (not a stop word) using LLM
  * @param {string} word - Word to check (should be lowercase)
@@ -230,6 +236,82 @@ async function isShortWordSignificant(word, originalWord) {
 }
 
 /**
+ * Check if a word is an acronym using LLM
+ * @param {string} word - Word to check (should be lowercase)
+ * @param {string} originalWord - Original word from query (to check case)
+ * @returns {Promise<boolean>} True if word is an acronym
+ */
+async function isAcronym(word, originalWord) {
+  const lowerWord = word.toLowerCase();
+
+  // If original word was all uppercase and >= 2 chars, it's likely an acronym
+  if (originalWord && originalWord === originalWord.toUpperCase() && originalWord.length >= 2 && /^[A-Z]+$/.test(originalWord)) {
+    console.log(`[IsAcronym] "${word}" is uppercase, treating as acronym`);
+    ACRONYM_DETECTION_CACHE.set(lowerWord, true);
+    return true;
+  }
+
+  // Check cache first
+  if (ACRONYM_DETECTION_CACHE.has(lowerWord)) {
+    const cached = ACRONYM_DETECTION_CACHE.get(lowerWord);
+    console.log(`[IsAcronym] Cache hit for "${word}": ${cached}`);
+    return cached;
+  }
+
+  // Check if there's already a pending request
+  if (PENDING_ACRONYM_REQUESTS.has(lowerWord)) {
+    const result = await PENDING_ACRONYM_REQUESTS.get(lowerWord);
+    return result;
+  }
+
+  // Check if LLM is available
+  if (typeof callLLM === 'undefined' || typeof getLLMConfig === 'undefined') {
+    // LLM not available, default to false (not an acronym)
+    console.log(`[IsAcronym] LLM not available, defaulting to false for "${word}"`);
+    ACRONYM_DETECTION_CACHE.set(lowerWord, false);
+    return false;
+  }
+
+  // Create a promise for this request
+  const acronymPromise = (async () => {
+    try {
+      // Build a concise prompt asking if the word is an acronym
+      const prompt = `Is "${word}" an acronym or abbreviation (like AI, ML, API, NASA, HTML)? Answer with ONLY "yes" or "no", no explanation.`;
+
+      // Get LLM config with a short timeout
+      const config = await getLLMConfig();
+      config.timeout = 3000; // 3 second timeout for quick response
+
+      const response = await callLLM(prompt, config);
+
+      // Parse response - look for "yes" or "no"
+      const lowerResponse = response.toLowerCase().trim();
+      const isAcro = lowerResponse.includes('yes') && !lowerResponse.includes('no');
+
+      console.log(`[IsAcronym] LLM response for "${word}": "${response}" → ${isAcro}`);
+
+      // Cache the result
+      ACRONYM_DETECTION_CACHE.set(lowerWord, isAcro);
+
+      return isAcro;
+    } catch (error) {
+      console.warn(`[IsAcronym] LLM check failed for "${word}":`, error.message);
+      // On error, default to false (not an acronym)
+      ACRONYM_DETECTION_CACHE.set(lowerWord, false);
+      return false;
+    } finally {
+      // Remove from pending requests
+      PENDING_ACRONYM_REQUESTS.delete(lowerWord);
+    }
+  })();
+
+  // Store the promise in pending requests
+  PENDING_ACRONYM_REQUESTS.set(lowerWord, acronymPromise);
+
+  return acronymPromise;
+}
+
+/**
  * Extract keywords from query string
  * Now uses LLM to determine if short words are significant
  * Preserves original case for uppercase acronyms for case-sensitive matching
@@ -254,7 +336,20 @@ async function extractKeywords(query) {
 
   const significanceResults = await Promise.allSettled(significanceChecks);
 
-  // Filter words based on significance results, preserving case for uppercase acronyms
+  // Check if words are acronyms in parallel (for words that are significant)
+  const acronymChecks = allWords.map((word, index) => {
+    const result = significanceResults[index];
+    const shouldCheck = result.status === 'fulfilled' && result.value;
+    // Only check acronym status for words we're keeping
+    if (shouldCheck || (word.length > 2 && !STOP_WORDS.has(word))) {
+      return isAcronym(word, originalWords[index]);
+    }
+    return Promise.resolve(false);
+  });
+
+  const acronymResults = await Promise.allSettled(acronymChecks);
+
+  // Filter words based on significance results, normalizing acronyms to uppercase
   const words = [];
   for (let i = 0; i < allWords.length; i++) {
     const word = allWords[i];
@@ -270,8 +365,16 @@ async function extractKeywords(query) {
 
     if (shouldKeep) {
       const origWord = originalWords[i];
-      // If original word was all uppercase and >= 2 chars, preserve case for case-sensitive matching
-      if (origWord && origWord === origWord.toUpperCase() && origWord.length >= 2 && /^[A-Z]+$/.test(origWord)) {
+      const acronymResult = acronymResults[i];
+      const isAcro = acronymResult.status === 'fulfilled' && acronymResult.value;
+
+      // If it's an acronym (confirmed by LLM or uppercase), normalize to uppercase
+      if (isAcro) {
+        const upperWord = word.toUpperCase();
+        console.log(`[ExtractKeywords] Normalizing acronym to uppercase: "${word}" → "${upperWord}"`);
+        words.push(upperWord);
+      } else if (origWord && origWord === origWord.toUpperCase() && origWord.length >= 2 && /^[A-Z]+$/.test(origWord)) {
+        // If original word was all uppercase and >= 2 chars, preserve case for case-sensitive matching
         console.log(`[ExtractKeywords] Preserving uppercase case for acronym: "${word}" → "${origWord}"`);
         words.push(origWord);
       } else {
@@ -298,7 +401,7 @@ async function extractKeywords(query) {
 
 /**
  * Check if text contains keywords
- * Case-sensitive for uppercase acronyms, case-insensitive for others
+ * Case-sensitive for acronyms (any length), case-insensitive for others
  * @param {string} text - Text to search
  * @param {Array} keywords - Keywords to find
  * @returns {boolean} True if any keyword is found
@@ -307,10 +410,11 @@ function containsKeywords(text, keywords) {
   if (!text || !keywords || keywords.length === 0) return false;
 
   return keywords.some(keyword => {
-    // If keyword is all uppercase and >= 2 chars, do case-sensitive matching
-    // This helps match acronyms like "AI", "ML", "API" in their proper case
-    if (keyword === keyword.toUpperCase() && keyword.length >= 2 && /^[A-Z]+$/.test(keyword)) {
-      // Case-sensitive match for uppercase acronyms
+    // If keyword is all uppercase and all letters, treat as acronym and do case-sensitive matching
+    // This helps match acronyms like "AI", "ML", "API", "NASA", "HTML" in their proper case
+    // Works for acronyms of any length
+    if (keyword === keyword.toUpperCase() && /^[A-Z]+$/.test(keyword) && keyword.length >= 2) {
+      // Case-sensitive match for acronyms
       return text.includes(keyword);
     } else {
       // Case-insensitive match for regular keywords
@@ -786,7 +890,7 @@ async function semanticFilter(ctx, params) {
     if (!matched && containsKeywords(title, expandedKeywords)) {
       // Find which keywords matched (for logging)
       const matchedKeywords = expandedKeywords.filter(kw => {
-        if (kw === kw.toUpperCase() && kw.length >= 2 && /^[A-Z]+$/.test(kw)) {
+        if (kw === kw.toUpperCase() && /^[A-Z]+$/.test(kw) && kw.length >= 2) {
           return title.includes(kw);
         } else {
           return titleLower.includes(kw.toLowerCase());
@@ -801,7 +905,7 @@ async function semanticFilter(ctx, params) {
     if (!matched && containsKeywords(url, expandedKeywords)) {
       // Find which keywords matched (for logging)
       const matchedKeywords = expandedKeywords.filter(kw => {
-        if (kw === kw.toUpperCase() && kw.length >= 2 && /^[A-Z]+$/.test(kw)) {
+        if (kw === kw.toUpperCase() && /^[A-Z]+$/.test(kw) && kw.length >= 2) {
           return url.includes(kw);
         } else {
           return urlLower.includes(kw.toLowerCase());
@@ -815,9 +919,9 @@ async function semanticFilter(ctx, params) {
     // Priority 4: Match domain against keywords
     if (!matched) {
       for (const keyword of expandedKeywords) {
-        // Case-sensitive for uppercase acronyms, case-insensitive for others
+        // Case-sensitive for acronyms (any length), case-insensitive for others
         let domainMatches = false;
-        if (keyword === keyword.toUpperCase() && keyword.length >= 2 && /^[A-Z]+$/.test(keyword)) {
+        if (keyword === keyword.toUpperCase() && /^[A-Z]+$/.test(keyword) && keyword.length >= 2) {
           domainMatches = domain && domain.includes(keyword);
         } else {
           domainMatches = domain && domain.toLowerCase().includes(keyword.toLowerCase());

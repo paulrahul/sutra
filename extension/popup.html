@@ -2137,8 +2137,20 @@
               </div>
               <div class="form-group" style="margin-bottom: 12px;">
                 <label style="font-weight: 600; margin-bottom: 4px; display: block; font-size: 13px;">Model Name</label>
-                <input type="text" id="localLLMModel" placeholder="llama3" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;" />
-                <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">Model to use (e.g., llama3, mistral, etc.)</div>
+                <input type="text" id="localLLMModel" list="localModelsList" placeholder="llama3" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;" />
+                <datalist id="localModelsList">
+                  <option value="llama3.2">Llama 3.2 - Latest, fast and capable</option>
+                  <option value="llama3.1">Llama 3.1 - Powerful general purpose</option>
+                  <option value="llama3">Llama 3 - Stable, widely used</option>
+                  <option value="mistral">Mistral - Fast and efficient</option>
+                  <option value="mixtral">Mixtral - Large mixture of experts</option>
+                  <option value="codellama">CodeLlama - Optimized for code</option>
+                  <option value="phi3">Phi 3 - Microsoft's compact model</option>
+                  <option value="qwen2.5">Qwen 2.5 - Alibaba's latest</option>
+                  <option value="gemma2">Gemma 2 - Google's open model</option>
+                  <option value="deepseek-coder">DeepSeek Coder - Code specialist</option>
+                </datalist>
+                <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">Select a model or type a custom name</div>
               </div>
             </div>
 
@@ -2158,8 +2170,16 @@
               </div>
               <div class="form-group" style="margin-bottom: 12px;">
                 <label style="font-weight: 600; margin-bottom: 4px; display: block; font-size: 13px;">Model</label>
-                <input type="text" id="cloudLLMModel" placeholder="gpt-4 or claude-3-sonnet-20240229" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;" />
-                <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">Model name (e.g., gpt-4, claude-3-sonnet-20240229)</div>
+                <input type="text" id="cloudLLMModel" list="cloudModelsList" placeholder="Select or type model name" style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 13px;" />
+                <datalist id="cloudModelsList">
+                  <!-- OpenAI models (default) -->
+                  <option value="gpt-4o">GPT-4o - Latest flagship model</option>
+                  <option value="gpt-4o-mini">GPT-4o Mini - Fast and affordable</option>
+                  <option value="gpt-4-turbo">GPT-4 Turbo - High capability</option>
+                  <option value="gpt-4">GPT-4 - Original GPT-4</option>
+                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo - Fast, cost-effective</option>
+                </datalist>
+                <div id="cloudModelHint" style="font-size: 11px; color: #6c757d; margin-top: 4px;">Select a model or type a custom name</div>
               </div>
             </div>
 

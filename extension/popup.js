@@ -3697,7 +3697,65 @@ async function initializeLLMConfig() {
   if (localModel) localModel.value = config.model || 'llama3';
   if (cloudProvider) cloudProvider.value = config.cloudProvider || 'openai';
   if (apiKey) apiKey.value = config.apiKey || '';
-  if (cloudModel) cloudModel.value = config.model || 'gpt-4';
+  if (cloudModel) cloudModel.value = config.model || 'gpt-4o';
+
+  // Cloud model options by provider
+  const cloudModelOptions = {
+    openai: [
+      { value: 'gpt-4o', label: 'GPT-4o - Latest flagship model' },
+      { value: 'gpt-4o-mini', label: 'GPT-4o Mini - Fast and affordable' },
+      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo - High capability' },
+      { value: 'gpt-4', label: 'GPT-4 - Original GPT-4' },
+      { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo - Fast, cost-effective' },
+      { value: 'o1-preview', label: 'O1 Preview - Advanced reasoning' },
+      { value: 'o1-mini', label: 'O1 Mini - Fast reasoning' }
+    ],
+    anthropic: [
+      { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 - Latest balanced' },
+      { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet - Fast and capable' },
+      { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku - Fastest' },
+      { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus - Most capable' },
+      { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet - Balanced' },
+      { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku - Fast' }
+    ]
+  };
+
+  // Function to update cloud model datalist
+  function updateCloudModelOptions(provider) {
+    const datalist = document.getElementById('cloudModelsList');
+    if (!datalist) return;
+
+    // Clear existing options
+    datalist.innerHTML = '';
+
+    // Add options for selected provider
+    const options = cloudModelOptions[provider] || cloudModelOptions.openai;
+    options.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      datalist.appendChild(option);
+    });
+  }
+
+  // Initialize cloud model options based on current provider
+  if (cloudProvider) {
+    updateCloudModelOptions(cloudProvider.value);
+
+    // Update options when provider changes
+    cloudProvider.addEventListener('change', () => {
+      updateCloudModelOptions(cloudProvider.value);
+
+      // Set a default model for the new provider if current model doesn't match
+      const currentModel = cloudModel?.value || '';
+      const newOptions = cloudModelOptions[cloudProvider.value] || [];
+      const isCurrentModelValid = newOptions.some(opt => opt.value === currentModel);
+
+      if (!isCurrentModelValid && cloudModel && newOptions.length > 0) {
+        cloudModel.value = newOptions[0].value;
+      }
+    });
+  }
 
   // Save button handler
   const saveBtn = document.getElementById('saveLLMConfigBtn');
@@ -3758,11 +3816,22 @@ async function testLLMConnection() {
   }
 
   try {
-    // Save config first
-    await saveLLMConfig();
+    // Read form values without saving
+    const provider = document.querySelector('input[name="llmProvider"]:checked')?.value || 'local';
+    const localEndpoint = document.getElementById('localLLMEndpoint')?.value || '';
+    const localModel = document.getElementById('localLLMModel')?.value || 'llama3';
+    const cloudProvider = document.getElementById('cloudProvider')?.value || 'openai';
+    const apiKey = document.getElementById('llmApiKey')?.value || '';
+    const cloudModel = document.getElementById('cloudLLMModel')?.value || 'gpt-4';
 
-    // Get updated config
-    const config = await getLLMConfig();
+    // Create config object in the same format as getLLMConfig() returns
+    const config = {
+      provider: provider,
+      localEndpoint: localEndpoint || 'http://localhost:11434/api/chat',
+      cloudProvider: cloudProvider,
+      apiKey: apiKey,
+      model: provider === 'local' ? localModel : cloudModel
+    };
 
     // Test with a simple prompt
     const testPrompt = 'Generate a simple execution plan for: "show top 5 domains"';
