@@ -82,9 +82,9 @@ function filterVisitsByTimeRange(visits, timeRange) {
  * Execute a single operation step
  * @param {Object} step - Execution step { op, params }
  * @param {Object} ctx - Current context { data, metadata }
- * @returns {*} Operation result
+ * @returns {Promise<*>} Operation result (may be async)
  */
-function executeStep(step, ctx) {
+async function executeStep(step, ctx) {
   if (!step.op) {
     throw new Error('Step must have an "op" field');
   }
@@ -102,8 +102,8 @@ function executeStep(step, ctx) {
   // Validate and apply defaults to parameters
   const params = validateParams(step.op, step.params || {});
 
-  // Execute operation
-  const result = operation.execute(ctx, params);
+  // Execute operation (may be async)
+  const result = await operation.execute(ctx, params);
 
   return result;
 }
@@ -112,9 +112,9 @@ function executeStep(step, ctx) {
  * Execute an execution plan
  * @param {Object} plan - Execution plan { steps: [...] }
  * @param {Array} initialData - Initial history data
- * @returns {*} Final result
+ * @returns {Promise<*>} Final result (may be async)
  */
-function executePlan(plan, initialData) {
+async function executePlan(plan, initialData) {
   if (!plan || !plan.steps || !Array.isArray(plan.steps)) {
     throw new Error('Invalid execution plan: must have "steps" array');
   }
@@ -150,7 +150,7 @@ function executePlan(plan, initialData) {
     const step = plan.steps[i];
 
     try {
-      const result = executeStep(step, ctx);
+      const result = await executeStep(step, ctx);
 
       // Update context for next step
       // If result is an array, it becomes the new data

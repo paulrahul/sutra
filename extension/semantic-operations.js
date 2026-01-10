@@ -1,5 +1,6 @@
-// Semantic Operations (v2 - Enhanced Local Heuristics)
+// Semantic Operations (v2 - Enhanced Local Heuristics + LLM Expansion)
 // Rule-based semantic filtering using domain lists, keywords, intent detection, and heuristics
+// Now includes LLM-based semantic expansion for unmapped keywords to improve query matching
 
 // Domain category mappings for semantic filtering
 const DOMAIN_CATEGORIES = {
@@ -125,28 +126,179 @@ const SYNONYMS = {
   'stackoverflow': ['stackoverflow.com', 'stack overflow', 'coding help']
 };
 
+// Cache for LLM-generated expansions (to avoid repeated calls)
+const LLM_EXPANSION_CACHE = new Map();
+
+// Pending LLM expansion requests (to avoid duplicate concurrent requests)
+const PENDING_LLM_REQUESTS = new Map();
+
 // Stop words to filter out from queries
 const STOP_WORDS = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those', 'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'you', 'your', 'yours', 'he', 'she', 'it', 'they', 'them', 'their', 'what', 'which', 'who', 'whom', 'whose', 'where', 'when', 'why', 'how', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'now', 'about', 'kind', 'type', 'types', 'kinds', 'content', 'stuff', 'things', 'thing', 'site', 'sites', 'website', 'websites', 'page', 'pages', 'link', 'links', 'visit', 'visited', 'browse', 'browsed', 'browsing', 'look', 'looked', 'looking', 'find', 'found', 'show', 'get', 'see', 'seen']);
 
+// Cache for LLM-based significance checks for short words
+const SHORT_WORD_SIGNIFICANCE_CACHE = new Map();
+
+// Pending LLM significance requests (to avoid duplicate concurrent requests)
+const PENDING_SIGNIFICANCE_REQUESTS = new Map();
+
+/**
+ * Check if a short word is significant (not a stop word) using LLM
+ * @param {string} word - Word to check (should be lowercase)
+ * @param {string} originalWord - Original word from query (to check case)
+ * @returns {Promise<boolean>} True if word is significant and should be kept
+ */
+async function isShortWordSignificant(word, originalWord) {
+  const lowerWord = word.toLowerCase();
+
+  // Always filter out stop words
+  if (STOP_WORDS.has(lowerWord)) {
+    return false;
+  }
+
+  // If word is longer than 2 characters, keep it (unless it's a stop word, already checked)
+  if (word.length > 2) {
+    return true;
+  }
+
+  // For very short words (1-2 chars), check cache first
+  if (SHORT_WORD_SIGNIFICANCE_CACHE.has(lowerWord)) {
+    const cached = SHORT_WORD_SIGNIFICANCE_CACHE.get(lowerWord);
+    console.log(`[IsShortWordSignificant] Cache hit for "${word}": ${cached}`);
+    return cached;
+  }
+
+  // Check if there's already a pending request
+  if (PENDING_SIGNIFICANCE_REQUESTS.has(lowerWord)) {
+    const result = await PENDING_SIGNIFICANCE_REQUESTS.get(lowerWord);
+    return result;
+  }
+
+  // If original word was all uppercase, it's likely an acronym - keep it
+  if (originalWord && originalWord === originalWord.toUpperCase() && originalWord.length >= 2) {
+    console.log(`[IsShortWordSignificant] "${word}" is uppercase acronym, keeping`);
+    SHORT_WORD_SIGNIFICANCE_CACHE.set(lowerWord, true);
+    return true;
+  }
+
+  // Check if LLM is available
+  if (typeof callLLM === 'undefined' || typeof getLLMConfig === 'undefined') {
+    // LLM not available, default to keeping short words that aren't stop words
+    // (conservative approach - better to include than exclude)
+    console.log(`[IsShortWordSignificant] LLM not available, defaulting to keep "${word}"`);
+    SHORT_WORD_SIGNIFICANCE_CACHE.set(lowerWord, true);
+    return true;
+  }
+
+  // Create a promise for this request
+  const significancePromise = (async () => {
+    try {
+      // Build a concise prompt asking if the word is significant
+      const prompt = `Is "${word}" a significant searchable term (like an acronym, abbreviation, or important keyword)? Examples: "AI"=yes, "it"=no, "ML"=yes, "to"=no. Answer with ONLY "yes" or "no", no explanation.`;
+
+      // Get LLM config with a short timeout
+      const config = await getLLMConfig();
+      config.timeout = 3000; // 3 second timeout for quick response
+
+      const response = await callLLM(prompt, config);
+
+      // Parse response - look for "yes" or "no"
+      const lowerResponse = response.toLowerCase().trim();
+      const isSignificant = lowerResponse.includes('yes') && !lowerResponse.includes('no');
+
+      console.log(`[IsShortWordSignificant] LLM response for "${word}": "${response}" → ${isSignificant}`);
+
+      // Cache the result
+      SHORT_WORD_SIGNIFICANCE_CACHE.set(lowerWord, isSignificant);
+
+      return isSignificant;
+    } catch (error) {
+      console.warn(`[IsShortWordSignificant] LLM check failed for "${word}":`, error.message);
+      // On error, default to keeping it (conservative approach)
+      const defaultKeep = true;
+      SHORT_WORD_SIGNIFICANCE_CACHE.set(lowerWord, defaultKeep);
+      return defaultKeep;
+    } finally {
+      // Remove from pending requests
+      PENDING_SIGNIFICANCE_REQUESTS.delete(lowerWord);
+    }
+  })();
+
+  // Store the promise in pending requests
+  PENDING_SIGNIFICANCE_REQUESTS.set(lowerWord, significancePromise);
+
+  return significancePromise;
+}
+
 /**
  * Extract keywords from query string
+ * Now uses LLM to determine if short words are significant
+ * Preserves original case for uppercase acronyms for case-sensitive matching
  * @param {string} query - User query
- * @returns {Array} Array of keywords
+ * @returns {Promise<Array>} Array of keywords (preserving case for uppercase acronyms)
  */
-function extractKeywords(query) {
+async function extractKeywords(query) {
   if (!query) return [];
 
+  // Keep original query to check for uppercase acronyms
+  const originalWords = query.replace(/[^\w\s]/g, ' ').split(/\s+/);
+
   // Convert to lowercase and split by non-word characters
-  const words = query.toLowerCase()
+  const allWords = query.toLowerCase()
     .replace(/[^\w\s]/g, ' ')
-    .split(/\s+/)
-    .filter(word => word.length > 2 && !STOP_WORDS.has(word));
+    .split(/\s+/);
+
+  // Check significance for all words in parallel
+  const significanceChecks = allWords.map((word, index) =>
+    isShortWordSignificant(word, originalWords[index])
+  );
+
+  const significanceResults = await Promise.allSettled(significanceChecks);
+
+  // Filter words based on significance results, preserving case for uppercase acronyms
+  const words = [];
+  for (let i = 0; i < allWords.length; i++) {
+    const word = allWords[i];
+    const result = significanceResults[i];
+    let shouldKeep = false;
+
+    if (result.status === 'fulfilled') {
+      shouldKeep = result.value;
+    } else {
+      // On error, default to keeping words > 2 chars
+      shouldKeep = word.length > 2 && !STOP_WORDS.has(word);
+    }
+
+    if (shouldKeep) {
+      const origWord = originalWords[i];
+      // If original word was all uppercase and >= 2 chars, preserve case for case-sensitive matching
+      if (origWord && origWord === origWord.toUpperCase() && origWord.length >= 2 && /^[A-Z]+$/.test(origWord)) {
+        console.log(`[ExtractKeywords] Preserving uppercase case for acronym: "${word}" → "${origWord}"`);
+        words.push(origWord);
+      } else {
+        words.push(word);
+      }
+    }
+  }
+
+  const filteredOut = allWords.filter((word, index) => {
+    const result = significanceResults[index];
+    if (result.status === 'fulfilled') {
+      return !result.value;
+    }
+    return word.length <= 2 || STOP_WORDS.has(word);
+  });
+
+  if (filteredOut.length > 0) {
+    console.log('[ExtractKeywords] Filtered out (stop words or not significant):', filteredOut);
+  }
+  console.log('[ExtractKeywords] Extracted keywords:', words);
 
   return words;
 }
 
 /**
- * Check if text contains keywords (case-insensitive)
+ * Check if text contains keywords
+ * Case-sensitive for uppercase acronyms, case-insensitive for others
  * @param {string} text - Text to search
  * @param {Array} keywords - Keywords to find
  * @returns {boolean} True if any keyword is found
@@ -154,8 +306,19 @@ function extractKeywords(query) {
 function containsKeywords(text, keywords) {
   if (!text || !keywords || keywords.length === 0) return false;
 
-  const lowerText = text.toLowerCase();
-  return keywords.some(keyword => lowerText.includes(keyword));
+  return keywords.some(keyword => {
+    // If keyword is all uppercase and >= 2 chars, do case-sensitive matching
+    // This helps match acronyms like "AI", "ML", "API" in their proper case
+    if (keyword === keyword.toUpperCase() && keyword.length >= 2 && /^[A-Z]+$/.test(keyword)) {
+      // Case-sensitive match for uppercase acronyms
+      return text.includes(keyword);
+    } else {
+      // Case-insensitive match for regular keywords
+      const lowerText = text.toLowerCase();
+      const lowerKeyword = keyword.toLowerCase();
+      return lowerText.includes(lowerKeyword);
+    }
+  });
 }
 
 /**
@@ -187,13 +350,16 @@ function detectQueryIntent(query) {
   if (!query) return { intent: null, categories: [] };
 
   const lowerQuery = query.toLowerCase();
+  console.log('[DetectQueryIntent] Checking query:', lowerQuery);
 
   for (const { pattern, intent, categories } of INTENT_PATTERNS) {
     if (pattern.test(lowerQuery)) {
+      console.log('[DetectQueryIntent] Matched pattern:', pattern.toString(), '→ intent:', intent, 'categories:', categories);
       return { intent, categories };
     }
   }
 
+  console.log('[DetectQueryIntent] No intent pattern matched');
   return { intent: null, categories: [] };
 }
 
@@ -207,12 +373,14 @@ function getCategoriesFromConcepts(query) {
 
   const lowerQuery = query.toLowerCase();
   const categories = new Set();
+  const matchedConcepts = [];
 
   // Check multi-word concepts first (like "social media", "wasting time")
   for (const [concept, cats] of Object.entries(SEMANTIC_CONCEPTS)) {
     if (concept.includes(' ')) {
       if (lowerQuery.includes(concept)) {
         cats.forEach(c => categories.add(c));
+        matchedConcepts.push({ concept, categories: cats });
       }
     }
   }
@@ -223,6 +391,7 @@ function getCategoriesFromConcepts(query) {
     // Check direct concept match
     if (SEMANTIC_CONCEPTS[word]) {
       SEMANTIC_CONCEPTS[word].forEach(c => categories.add(c));
+      matchedConcepts.push({ concept: word, categories: SEMANTIC_CONCEPTS[word] });
     }
 
     // Check partial matches for stemming (e.g., "distracts" -> "distract")
@@ -230,41 +399,316 @@ function getCategoriesFromConcepts(query) {
       if (!concept.includes(' ') && (word.startsWith(concept) || concept.startsWith(word))) {
         if (word.length >= 4 && concept.length >= 4) { // Avoid false positives
           cats.forEach(c => categories.add(c));
+          matchedConcepts.push({ concept, categories: cats, matchedWord: word });
         }
       }
     }
   }
 
-  return Array.from(categories);
+  if (matchedConcepts.length > 0) {
+    console.log('[GetCategoriesFromConcepts] Matched concepts:', matchedConcepts);
+  } else {
+    console.log('[GetCategoriesFromConcepts] No concepts matched');
+  }
+
+  const result = Array.from(categories);
+  console.log('[GetCategoriesFromConcepts] Result categories:', result);
+  return result;
 }
 
 /**
- * Expand keywords using synonyms
- * @param {Array} keywords - Original keywords
- * @returns {Array} Expanded keywords
+ * Get LLM-based expansions for a keyword that's not in hardcoded mappings
+ * @param {string} keyword - Keyword to expand
+ * @returns {Promise<Array>} Array of expanded terms/synonyms
  */
-function expandKeywords(keywords) {
-  const expanded = new Set(keywords);
+async function getLLMExpansions(keyword) {
+  const lowerKeyword = keyword.toLowerCase();
+
+  // Check cache first
+  if (LLM_EXPANSION_CACHE.has(lowerKeyword)) {
+    return LLM_EXPANSION_CACHE.get(lowerKeyword);
+  }
+
+  // Check if there's already a pending request for this keyword
+  if (PENDING_LLM_REQUESTS.has(lowerKeyword)) {
+    return PENDING_LLM_REQUESTS.get(lowerKeyword);
+  }
+
+  // Check if LLM is available
+  if (typeof callLLM === 'undefined') {
+    // LLM not available, return empty array
+    return [];
+  }
+
+  // Create a promise for this request
+  const expansionPromise = (async () => {
+    try {
+      // Check if LLM functions are available
+      if (typeof getLLMConfig === 'undefined') {
+        return [];
+      }
+
+      // Build a concise prompt that asks for quick expansions only
+      const prompt = `Generate 3-5 synonyms, related terms, or expansions for the keyword "${keyword}" that would help find relevant web content. Return ONLY a JSON array of strings, no explanation. Example: ["term1", "term2", "term3"]`;
+
+      // Get LLM config with a short timeout for fast response
+      const config = await getLLMConfig();
+      config.timeout = 5000; // 5 second timeout for quick response
+
+      const response = await callLLM(prompt, config);
+
+      // Try to parse JSON array from response
+      let expansions = [];
+      try {
+        // Remove markdown code blocks if present
+        let jsonStr = response.trim();
+        jsonStr = jsonStr.replace(/^```json\s*/i, '');
+        jsonStr = jsonStr.replace(/^```\s*/, '');
+        jsonStr = jsonStr.replace(/\s*```$/, '');
+        jsonStr = jsonStr.trim();
+
+        // Try to find JSON array in response
+        const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          expansions = JSON.parse(arrayMatch[0]);
+        } else {
+          // If not an array, try parsing as single JSON
+          const parsed = JSON.parse(jsonStr);
+          if (Array.isArray(parsed)) {
+            expansions = parsed;
+          } else if (typeof parsed === 'object' && parsed.expansions) {
+            expansions = parsed.expansions;
+          } else if (typeof parsed === 'object' && parsed.synonyms) {
+            expansions = parsed.synonyms;
+          }
+        }
+      } catch (parseError) {
+        // If JSON parsing fails, try to extract terms from plain text
+        // Split by common delimiters and clean up
+        const terms = response
+          .split(/[,\n]/)
+          .map(t => t.trim().replace(/^["']|["']$/g, ''))
+          .filter(t => t.length > 0 && t.length < 50) // Reasonable length
+          .slice(0, 5); // Max 5 terms
+        expansions = terms;
+      }
+
+      // Validate and clean expansions
+      if (!Array.isArray(expansions)) {
+        expansions = [];
+      }
+
+      // Filter out the original keyword and ensure all are strings
+      expansions = expansions
+        .filter(term => typeof term === 'string' && term.toLowerCase() !== lowerKeyword)
+        .map(term => term.toLowerCase().trim())
+        .filter(term => term.length > 0)
+        .slice(0, 5); // Limit to 5 expansions
+
+      // Cache the result
+      LLM_EXPANSION_CACHE.set(lowerKeyword, expansions);
+
+      return expansions;
+    } catch (error) {
+      console.warn(`[Semantic Expansion] LLM expansion failed for "${keyword}":`, error.message);
+      // Cache empty result to avoid repeated failures
+      LLM_EXPANSION_CACHE.set(lowerKeyword, []);
+      return [];
+    } finally {
+      // Remove from pending requests
+      PENDING_LLM_REQUESTS.delete(lowerKeyword);
+    }
+  })();
+
+  // Store the promise in pending requests
+  PENDING_LLM_REQUESTS.set(lowerKeyword, expansionPromise);
+
+  return expansionPromise;
+}
+
+/**
+ * Parse LLM response for batched expansion
+ * @param {string} response - LLM response string
+ * @returns {Object} Parsed object mapping keywords to expansion arrays
+ */
+function parseExpansionResponse(response) {
+  if (!response) return {};
+
+  let jsonStr = response.trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/, '')
+    .replace(/\s*```$/, '')
+    .trim();
+
+  try {
+    // Try to find JSON object in response
+    const objMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      const parsed = JSON.parse(objMatch[0]);
+      // Validate and clean the result
+      const result = {};
+      for (const [key, value] of Object.entries(parsed)) {
+        if (Array.isArray(value)) {
+          result[key.toLowerCase()] = value
+            .filter(v => typeof v === 'string' && v.length > 0)
+            .map(v => v.toLowerCase().trim())
+            .slice(0, 5); // Limit to 5 expansions per keyword
+        }
+      }
+      return result;
+    }
+  } catch (e) {
+    console.warn('[ParseExpansion] JSON parse failed:', e.message);
+  }
+  return {};
+}
+
+/**
+ * Get batched LLM expansions for multiple keywords in a single call
+ * More efficient than calling getLLMExpansions for each keyword separately
+ * @param {Array} keywords - Array of keywords to expand
+ * @returns {Promise<Object>} Object mapping keywords to expansion arrays
+ */
+async function getBatchedLLMExpansions(keywords) {
+  if (!keywords || keywords.length === 0) return {};
+
+  // Check if LLM is available
+  if (typeof callLLM === 'undefined' || typeof getLLMConfig === 'undefined') {
+    return {};
+  }
+
+  // Check cache for all keywords first
+  const uncachedKeywords = [];
+  const result = {};
 
   for (const keyword of keywords) {
     const lowerKeyword = keyword.toLowerCase();
-    if (SYNONYMS[lowerKeyword]) {
-      SYNONYMS[lowerKeyword].forEach(syn => expanded.add(syn));
+    if (LLM_EXPANSION_CACHE.has(lowerKeyword)) {
+      result[keyword] = LLM_EXPANSION_CACHE.get(lowerKeyword);
+      console.log(`[BatchedExpansion] Cache hit for "${keyword}":`, result[keyword]);
+    } else {
+      uncachedKeywords.push(keyword);
     }
   }
 
-  return Array.from(expanded);
+  // If all cached, return immediately
+  if (uncachedKeywords.length === 0) {
+    console.log('[BatchedExpansion] All keywords cached, skipping LLM call');
+    return result;
+  }
+
+  console.log('[BatchedExpansion] Uncached keywords:', uncachedKeywords);
+
+  // Single LLM call for all uncached keywords
+  const prompt = `Generate 3 synonyms or related terms for each keyword that would help find relevant web content. Return ONLY a JSON object, no explanation.
+Keywords: ${uncachedKeywords.join(', ')}
+Format: {"keyword1": ["term1", "term2", "term3"], "keyword2": ["term1", "term2", "term3"]}`;
+
+  try {
+    const config = await getLLMConfig();
+    config.timeout = 5000; // 5 second timeout
+
+    console.log('[BatchedExpansion] Calling LLM for', uncachedKeywords.length, 'keywords');
+    const startTime = Date.now();
+    const response = await callLLM(prompt, config);
+    const elapsed = Date.now() - startTime;
+    console.log(`[BatchedExpansion] LLM response received in ${elapsed}ms`);
+
+    const parsed = parseExpansionResponse(response);
+    console.log('[BatchedExpansion] Parsed expansions:', parsed);
+
+    // Cache and add to result
+    for (const keyword of uncachedKeywords) {
+      const lowerKeyword = keyword.toLowerCase();
+      // Try exact match (response keys are lowercased by parseExpansionResponse)
+      const expansions = parsed[lowerKeyword] || [];
+      LLM_EXPANSION_CACHE.set(lowerKeyword, expansions);
+      result[keyword] = expansions;
+    }
+  } catch (error) {
+    console.warn('[BatchedExpansion] LLM call failed:', error.message);
+    // Cache empty results to avoid repeated failures
+    for (const keyword of uncachedKeywords) {
+      LLM_EXPANSION_CACHE.set(keyword.toLowerCase(), []);
+      result[keyword] = [];
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Expand keywords using synonyms (hardcoded) and LLM (for unmapped keywords)
+ * Uses batched LLM call for efficiency when multiple keywords need expansion
+ * @param {Array} keywords - Original keywords
+ * @param {boolean} useLLM - Whether to use LLM for unmapped keywords (default: true)
+ * @returns {Promise<Array>} Expanded keywords
+ */
+async function expandKeywords(keywords, useLLM = true) {
+  console.log('[ExpandKeywords] Starting expansion for keywords:', keywords);
+  const expanded = new Set(keywords);
+  const unmappedKeywords = [];
+  const hardcodedExpansions = {};
+
+  // First, expand using hardcoded synonyms
+  for (const keyword of keywords) {
+    const lowerKeyword = keyword.toLowerCase();
+    if (SYNONYMS[lowerKeyword]) {
+      const synonyms = SYNONYMS[lowerKeyword];
+      synonyms.forEach(syn => expanded.add(syn));
+      hardcodedExpansions[keyword] = synonyms;
+      console.log(`[ExpandKeywords] Found hardcoded synonyms for "${keyword}":`, synonyms);
+    } else if (useLLM && keyword.length >= 3) {
+      // Only use LLM for keywords that are at least 3 characters
+      unmappedKeywords.push(keyword);
+    }
+  }
+
+  if (Object.keys(hardcodedExpansions).length > 0) {
+    console.log('[ExpandKeywords] Hardcoded expansions:', hardcodedExpansions);
+  }
+
+  // If LLM is enabled and we have unmapped keywords, get batched LLM expansions
+  if (useLLM && unmappedKeywords.length > 0 && typeof callLLM !== 'undefined') {
+    console.log('[ExpandKeywords] Unmapped keywords (using batched LLM):', unmappedKeywords);
+
+    // Single batched LLM call for all unmapped keywords
+    const batchedExpansions = await getBatchedLLMExpansions(unmappedKeywords);
+
+    // Add expansions to the set
+    for (const [keyword, expansions] of Object.entries(batchedExpansions)) {
+      if (expansions && expansions.length > 0) {
+        console.log(`[ExpandKeywords] LLM expansions for "${keyword}":`, expansions);
+        expansions.forEach(term => expanded.add(term.toLowerCase()));
+      } else {
+        console.log(`[ExpandKeywords] No LLM expansions for "${keyword}"`);
+      }
+    }
+  } else if (unmappedKeywords.length > 0) {
+    console.log('[ExpandKeywords] LLM not available, skipping expansion for:', unmappedKeywords);
+  }
+
+  const finalExpanded = Array.from(expanded);
+  console.log('[ExpandKeywords] Final expanded keywords:', finalExpanded);
+  return finalExpanded;
 }
 
 /**
  * Semantic filter operation (contract-based)
  * Filters visits based on semantic query using heuristics, intent detection, and concept mapping
+ * Now supports LLM-based expansion for unmapped keywords
  */
-function semanticFilter(ctx, params) {
+async function semanticFilter(ctx, params) {
   const data = ctx.data;
   const query = params.query || '';
 
+  console.log('[SemanticFilter] ========================================');
+  console.log('[SemanticFilter] Starting semantic filter');
+  console.log('[SemanticFilter] Query:', query);
+  console.log('[SemanticFilter] Input data count:', data.length);
+
   if (!query) {
+    console.log('[SemanticFilter] No query provided, returning all data');
     return data; // No filter if no query
   }
 
@@ -272,9 +716,11 @@ function semanticFilter(ctx, params) {
 
   // 1. Detect query intent (highest priority)
   const { intent, categories: intentCategories } = detectQueryIntent(query);
+  console.log('[SemanticFilter] Intent detection:', { intent, categories: intentCategories });
 
   // 2. Get categories from semantic concepts
   const conceptCategories = getCategoriesFromConcepts(query);
+  console.log('[SemanticFilter] Concept categories:', conceptCategories);
 
   // 3. Check for direct category mentions
   const mentionedCategories = [];
@@ -283,6 +729,7 @@ function semanticFilter(ctx, params) {
       mentionedCategories.push(category);
     }
   }
+  console.log('[SemanticFilter] Mentioned categories:', mentionedCategories);
 
   // 4. Combine all relevant categories
   const allRelevantCategories = new Set([
@@ -290,54 +737,128 @@ function semanticFilter(ctx, params) {
     ...conceptCategories,
     ...mentionedCategories
   ]);
+  console.log('[SemanticFilter] All relevant categories:', Array.from(allRelevantCategories));
 
-  // 5. Extract and expand keywords
-  const keywords = extractKeywords(query);
-  const expandedKeywords = expandKeywords(keywords);
+  // 5. Extract and expand keywords (now async with LLM support)
+  const keywords = await extractKeywords(query);
+  console.log('[SemanticFilter] Extracted keywords:', keywords);
+
+  const expandedKeywords = await expandKeywords(keywords, true); // Enable LLM expansion
+  console.log('[SemanticFilter] Expanded keywords:', expandedKeywords);
+  console.log('[SemanticFilter] Expansion added:', expandedKeywords.length - keywords.length, 'new terms');
 
   // If we have relevant categories from intent/concepts, prioritize category-based filtering
   const hasCategoryContext = allRelevantCategories.size > 0;
+  console.log('[SemanticFilter] Has category context:', hasCategoryContext);
+
+  // Track matches by priority for debugging
+  const matchStats = {
+    categoryMatch: 0,
+    titleMatch: 0,
+    urlMatch: 0,
+    domainMatch: 0,
+    domainCategoryMatch: 0,
+    noMatch: 0
+  };
 
   // Filter visits
   const filtered = data.filter(v => {
     const domain = getDomain(v.url);
     const domainCats = getDomainCategories(domain);
-    const title = (v.title || '').toLowerCase();
-    const url = v.url.toLowerCase();
+    const title = v.title || '';
+    const titleLower = title.toLowerCase();
+    const url = v.url || '';
+    const urlLower = url.toLowerCase();
+
+    let matched = false;
+    let matchReason = '';
 
     // Priority 1: Match by detected categories (from intent or concepts)
     if (hasCategoryContext) {
       if (domainCats.some(cat => allRelevantCategories.has(cat))) {
-        return true;
+        matched = true;
+        matchReason = `category:${domainCats.find(cat => allRelevantCategories.has(cat))}`;
+        matchStats.categoryMatch++;
       }
     }
 
-    // Priority 2: Match keywords in title
-    if (containsKeywords(title, expandedKeywords)) {
-      return true;
+    // Priority 2: Match keywords in title (case-sensitive for uppercase acronyms)
+    if (!matched && containsKeywords(title, expandedKeywords)) {
+      // Find which keywords matched (for logging)
+      const matchedKeywords = expandedKeywords.filter(kw => {
+        if (kw === kw.toUpperCase() && kw.length >= 2 && /^[A-Z]+$/.test(kw)) {
+          return title.includes(kw);
+        } else {
+          return titleLower.includes(kw.toLowerCase());
+        }
+      });
+      matched = true;
+      matchReason = `title:${matchedKeywords.join(',')}`;
+      matchStats.titleMatch++;
     }
 
-    // Priority 3: Match keywords in URL
-    if (containsKeywords(url, expandedKeywords)) {
-      return true;
+    // Priority 3: Match keywords in URL (case-sensitive for uppercase acronyms)
+    if (!matched && containsKeywords(url, expandedKeywords)) {
+      // Find which keywords matched (for logging)
+      const matchedKeywords = expandedKeywords.filter(kw => {
+        if (kw === kw.toUpperCase() && kw.length >= 2 && /^[A-Z]+$/.test(kw)) {
+          return url.includes(kw);
+        } else {
+          return urlLower.includes(kw.toLowerCase());
+        }
+      });
+      matched = true;
+      matchReason = `url:${matchedKeywords.join(',')}`;
+      matchStats.urlMatch++;
     }
 
     // Priority 4: Match domain against keywords
-    for (const keyword of expandedKeywords) {
-      if (domain && domain.toLowerCase().includes(keyword)) {
-        return true;
+    if (!matched) {
+      for (const keyword of expandedKeywords) {
+        // Case-sensitive for uppercase acronyms, case-insensitive for others
+        let domainMatches = false;
+        if (keyword === keyword.toUpperCase() && keyword.length >= 2 && /^[A-Z]+$/.test(keyword)) {
+          domainMatches = domain && domain.includes(keyword);
+        } else {
+          domainMatches = domain && domain.toLowerCase().includes(keyword.toLowerCase());
+        }
+        if (domainMatches) {
+          matched = true;
+          matchReason = `domain:${keyword}`;
+          matchStats.domainMatch++;
+          break;
+        }
       }
     }
 
     // Priority 5: Match domain categories against keywords
-    for (const keyword of expandedKeywords) {
-      if (domainCats.some(cat => cat.includes(keyword) || keyword.includes(cat))) {
-        return true;
+    if (!matched) {
+      for (const keyword of expandedKeywords) {
+        if (domainCats.some(cat => cat.includes(keyword) || keyword.includes(cat))) {
+          matched = true;
+          matchReason = `domainCategory:${keyword}`;
+          matchStats.domainCategoryMatch++;
+          break;
+        }
       }
     }
 
-    return false;
+    if (!matched) {
+      matchStats.noMatch++;
+    } else {
+      // Log first few matches for debugging
+      if (matchStats.categoryMatch + matchStats.titleMatch + matchStats.urlMatch +
+          matchStats.domainMatch + matchStats.domainCategoryMatch <= 5) {
+        console.log(`[SemanticFilter] Match: ${domain} | ${title.substring(0, 60)} | Reason: ${matchReason}`);
+      }
+    }
+
+    return matched;
   });
+
+  console.log('[SemanticFilter] Match statistics:', matchStats);
+  console.log('[SemanticFilter] Filtered results count:', filtered.length);
+  console.log('[SemanticFilter] ========================================');
 
   // If no results and we had category context, this is expected behavior
   // (user asked about something not in their history)
@@ -483,6 +1004,7 @@ if (typeof module !== 'undefined' && module.exports) {
     expandKeywords
   };
 }
+
 
 
 

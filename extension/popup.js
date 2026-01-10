@@ -3799,6 +3799,8 @@ function showSettingsView() {
   clearOutput();
 
   renderSettingsView();
+  // Reload LLM configuration values from storage
+  initializeLLMConfig();
 }
 
 // Get all unique domains from history
@@ -5747,7 +5749,7 @@ async function handleAISearch() {
 
     let result;
     try {
-      result = executePlan(plan, response.visits);
+      result = await executePlan(plan, response.visits);
     } catch (error) {
       showError(`Execution Error: ${error.message}`);
       return;
