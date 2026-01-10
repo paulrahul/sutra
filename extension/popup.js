@@ -2241,7 +2241,6 @@ function formatTimeRange(timeRangeInfo) {
 
 // Helper function to format time range for display in headers
 function formatTimeRangeForHeader(timeRangeInfo) {
-  console.log(timeRangeInfo);
   const rangeText = formatTimeRange(timeRangeInfo);
   if (!rangeText) return '';
   return `<span style="font-weight: 400; color: #667eea; font-size: 0.9em;">(${rangeText})</span>`;
@@ -2970,8 +2969,31 @@ function renderAIResult(query, plan, result, metadata = {}) {
 
   // Render results based on type
   if (Array.isArray(result)) {
-    // Array of visits
-    if (result.length > 0 && result[0].url) {
+    // Array of top_links results (has visit_count but no visited_at)
+    if (result.length > 0 && result[0].url && result[0].visit_count !== undefined && result[0].visited_at === undefined) {
+      html += `<div style="margin-top: 12px;">`;
+      html += `<div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">Found ${result.length} result${result.length !== 1 ? 's' : ''}</div>`;
+      html += `<div style="max-height: 400px; overflow-y: auto;">`;
+
+      result.slice(0, 50).forEach((item, index) => {
+        html += `<div style="padding: 12px; border-bottom: 1px solid #e5e7eb; ${index === 0 ? 'border-top: 1px solid #e5e7eb;' : ''}">`;
+        html += `<div style="font-weight: 600; margin-bottom: 4px;">`;
+        html += `<a href="${item.url}" target="_blank" style="color: #667eea; text-decoration: none;">${getUrlDisplayLabel(item.url) || item.url}</a>`;
+        html += `</div>`;
+        html += `<div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">${item.url}</div>`;
+        html += `<div style="font-size: 11px; color: #9ca3af;">${item.visit_count} visit${item.visit_count !== 1 ? 's' : ''}</div>`;
+        html += `</div>`;
+      });
+
+      if (result.length > 50) {
+        html += `<div style="padding: 12px; text-align: center; color: #6b7280; font-size: 12px;">... and ${result.length - 50} more results</div>`;
+      }
+
+      html += `</div>`;
+      html += `</div>`;
+    }
+    // Array of visits (has visited_at)
+    else if (result.length > 0 && result[0].url && result[0].visited_at !== undefined) {
       html += `<div style="margin-top: 12px;">`;
       html += `<div style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">Found ${result.length} result${result.length !== 1 ? 's' : ''}</div>`;
       html += `<div style="max-height: 400px; overflow-y: auto;">`;
@@ -5393,6 +5415,17 @@ function topDomains(ctx, params) {
   const data = ctx.data;
   const limit = params.limit || 10;
 
+  // Check if data is already grouped (from group_by operation)
+  // Grouped data has structure: { domain: "...", count: N, visits: [...] }
+  if (data.length > 0 && data[0].domain !== undefined && data[0].count !== undefined) {
+    // Data is already grouped by domain, use the counts directly
+    return data
+      .map(item => ({ domain: item.domain, visit_count: item.count }))
+      .sort((a, b) => b.visit_count - a.visit_count)
+      .slice(0, limit || Infinity);
+  }
+
+  // Data is raw visits, count domains
   const counts = {};
   data.forEach(v => {
     const domain = getDomain(v.url);
