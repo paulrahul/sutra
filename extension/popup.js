@@ -1553,10 +1553,14 @@ function renderSessions(data, timeRangeInfo = null) {
     return '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No sessions found</div></div>';
   }
 
+  // Sort sessions by start time descending (most recent first)
+  const sortedSessions = [...data].sort((a, b) => new Date(b.start) - new Date(a.start));
+
   let html = '<div class="result-container">';
   html += '<div class="card"><div class="card-header">Browsing Sessions ' + formatTimeRangeForHeader(timeRangeInfo) + '</div>';
+  html += `<div style="padding: 8px 16px; color: #6c757d; font-size: 12px; border-bottom: 1px solid #e9ecef;">Showing ${Math.min(20, sortedSessions.length)} of ${data.length} sessions (most recent first)</div>`;
 
-  data.slice(0, 10).forEach((session, index) => {
+  sortedSessions.slice(0, 20).forEach((session, index) => {
     const start = new Date(session.start);
     const end = new Date(session.end);
     html += `
