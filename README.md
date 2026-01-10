@@ -66,26 +66,13 @@
 
 ## Usage
 
-### Local Mode (Default)
-
-By default, Sutra processes all data locally on your device. No data is transmitted to any external server.
+Sutra processes all data locally on your device. No data is transmitted to any external server.
 
 1. Click the Sutra icon in your Chrome toolbar
 2. Select an operation from the categories
 3. Configure any required parameters (date ranges, limits, etc.)
 4. Click to run the analysis
 5. View your insights in the results panel
-
-### MCP Mode (Optional)
-
-For advanced users, Sutra supports connecting to a Model Context Protocol (MCP) server for server-side processing.
-
-1. Switch to "MCP" mode in the extension
-2. Configure your MCP server URL (e.g., `http://localhost:8082`)
-3. Operations will be processed on your MCP server
-4. Results are returned to the extension for display
-
-**Note:** When using MCP mode with external servers, your browsing history data will be sent to that server. Ensure you trust the server you configure.
 
 ## Privacy
 
@@ -99,26 +86,6 @@ Sutra is designed with privacy in mind:
 
 **Required Permissions:**
 - **History** - To read your browsing history and provide insights
-- **Storage** - To save your preferences (categories, mode, MCP server URL) locally
+- **Storage** - To save your preferences (categories, etc.) locally
 
 For detailed information, see our [Privacy Policy](PRIVACY_POLICY.md).
-
-## MCP Server (Optional)
-
-Sutra includes an optional MCP server for server-side processing. The MCP server supports a subset of operations and can be run locally or on a remote server.
-
-### Running the MCP Server
-
-```bash
-cd mcp
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-The server will start on `http://localhost:8082` by default.
-
-### Supported MCP Operations
-
-- `top_links` - Get most frequently visited links
-- `top_domains_by_day` - Get top domains for a specific day
-- `neighbor_visits` - Find visits near a given anchor URL
