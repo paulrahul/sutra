@@ -24,29 +24,43 @@ Sutra stores the following preferences locally on your device:
 
 - User-defined domain categories
 - System category overrides
-- Mode preference (local or MCP mode)
-- MCP server URL (if configured)
+- LLM provider preference (local or cloud)
+- Local LLM endpoint URL (if using local mode)
+- Cloud LLM provider (OpenAI or Anthropic, if using cloud mode)
+- API keys for cloud LLM providers (stored locally, encrypted by Chrome)
+- Model name preference
+- Dark mode preference
+- Last search result state (for restoring previous queries)
 
 ## How We Use Your Data
 
-### Local Processing
+### Local LLM Mode
 
-When using Sutra in "local" mode, all data processing occurs entirely on your device. Your browsing history is:
+When using Sutra in "local LLM" mode, all data processing occurs entirely on your device. Your browsing history is:
 
 - Read from your browser's history
 - Processed locally in the extension
+- Sent to your local LLM server (typically running on localhost, e.g., Ollama)
 - Displayed as insights in the extension popup
 - **Never transmitted to any external server**
 
-### MCP Mode (Optional)
+**Note:** If you configure a localhost server (e.g., `http://localhost:11434`), your data remains on your device. If you configure an external server URL, data will be transmitted to that server.
 
-If you choose to use "MCP mode" and configure an MCP server URL, your browsing history data will be:
+### Cloud LLM Mode (Optional)
 
-- Sent to the MCP server you specify
-- Processed by that server to generate insights
-- The results returned to the extension for display
+If you choose to use "cloud LLM" mode and configure a cloud provider (OpenAI or Anthropic), the following applies:
 
-**Important:** The MCP server URL is user-configured. If you use a localhost server, data remains on your device. If you use an external server, data will be transmitted to that server. We have no control over external MCP servers you configure.
+- **Only your search queries are sent** to the cloud LLM API (OpenAI or Anthropic)
+- **Your browsing history data is NOT sent** to cloud providers
+- The cloud LLM generates an execution plan based on your query
+- The execution plan is processed locally against your browsing history
+- Results are displayed in the extension popup
+
+**Important:**
+- When using cloud mode, your search queries are sent to either OpenAI (`api.openai.com`) or Anthropic (`api.anthropic.com`) depending on your configuration
+- Your full browsing history remains on your device and is never transmitted
+- You are responsible for the privacy practices of the cloud LLM provider you choose
+- API keys are stored locally on your device and are only used to authenticate with the cloud provider
 
 ## Data Storage
 
@@ -68,7 +82,8 @@ Sutra does not store your browsing history. It only reads history data that is a
 
 Sutra does not share your data with any third parties, except:
 
-- **User-Configured MCP Servers:** If you configure an MCP server URL, data will be sent to that server. You are responsible for the privacy practices of any external MCP server you use.
+- **Cloud LLM Providers (Optional):** If you choose to use cloud LLM mode, your search queries (but not your browsing history) will be sent to either OpenAI or Anthropic, depending on your configuration. You are responsible for reviewing and accepting the privacy policies of these providers.
+- **User-Configured Local LLM Servers:** If you configure a local LLM server URL, data will be sent to that server. If you use a localhost server, data remains on your device. If you use an external server, you are responsible for the privacy practices of that server.
 
 ### No Analytics or Tracking
 
@@ -87,14 +102,14 @@ You have full control over your data:
 - **Disable the extension:** You can disable or uninstall the extension at any time
 - **Clear local storage:** You can clear stored preferences through Chrome's extension settings
 - **Manage browser history:** You can view, delete, or modify your browser history through Chrome's history page
-- **Choose processing mode:** You can choose between local processing (no data transmission) or MCP mode (user-configured server)
+- **Choose processing mode:** You can choose between local LLM mode (data stays on your device or localhost) or cloud LLM mode (queries sent to OpenAI/Anthropic, but browsing history stays local)
 
 ### Permissions
 
 Sutra requires the following permissions:
 
 - **History permission:** Required to read your browsing history and provide insights
-- **Storage permission:** Required to save your preferences (categories, mode, MCP server URL) locally
+- **Storage permission:** Required to save your preferences (categories, LLM configuration, API keys, UI preferences) locally
 
 You can revoke these permissions at any time through Chrome's extension settings, though this may limit the extension's functionality.
 
@@ -103,7 +118,9 @@ You can revoke these permissions at any time through Chrome's extension settings
 We take data security seriously:
 
 - All local data is stored using Chrome's secure storage APIs
-- No data is transmitted unless you explicitly configure an MCP server
+- API keys are stored locally and encrypted by Chrome's storage system
+- No browsing history data is transmitted unless you explicitly configure a cloud LLM provider (and even then, only queries are sent, not history)
+- When using local LLM mode with localhost, all data remains on your device
 - The extension only accesses data necessary for its functionality
 
 ## Children's Privacy
@@ -127,7 +144,7 @@ This privacy policy is designed to comply with:
 
 ---
 
-**Note:** This extension is provided "as is" and processes your data locally by default. When using MCP mode with external servers, you are responsible for ensuring those servers comply with applicable privacy laws and regulations.
+**Note:** This extension is provided "as is" and processes your data locally by default. When using cloud LLM mode, your search queries are sent to third-party providers (OpenAI or Anthropic), and you are responsible for reviewing their privacy policies. When using local LLM mode with external servers, you are responsible for ensuring those servers comply with applicable privacy laws and regulations.
 
 
 
