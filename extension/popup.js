@@ -1174,7 +1174,12 @@ function runLocalNeighborVisits(data, anchor, radiusMinutes, anchorDateTime = nu
       return currentDiff < closestDiff ? current : closest;
     });
   } else {
-    anchorVisit = anchorMatches[0];
+    // When no datetime is provided, use the most recent visit
+    anchorVisit = anchorMatches.reduce((mostRecent, current) => {
+      const currentTime = new Date(current.visited_at);
+      const mostRecentTime = new Date(mostRecent.visited_at);
+      return currentTime > mostRecentTime ? current : mostRecent;
+    });
   }
 
   const anchorDomain = getDomain(anchorVisit.url);
@@ -5446,7 +5451,12 @@ function neighborVisits(ctx, params) {
       return currentDiff < closestDiff ? current : closest;
     });
   } else {
-    anchorVisit = anchorMatches[0];
+    // When no datetime is provided, use the most recent visit
+    anchorVisit = anchorMatches.reduce((mostRecent, current) => {
+      const currentTime = new Date(current.visited_at);
+      const mostRecentTime = new Date(mostRecent.visited_at);
+      return currentTime > mostRecentTime ? current : mostRecent;
+    });
   }
 
   const anchorDomain = getDomain(anchorVisit.url);
